@@ -1,19 +1,14 @@
-function Register() {
+function Login() {
     return (
         <div className="min-w-screen min-h-screen bg-black flex items-center justify-center flex-col font-sans">
             <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-6xl mb-16 font-bold tracking-tight">Yeld</h1>
             
             <form className="flex flex-col w-96 bg-zinc-950 p-8 rounded-2xl shadow-xl border border-zinc-900">
                 <div className="flex justify-center space-x-1">
-                    <label className="text-gray-400 mb-2 text-sm font-medium">Already have an account?</label>
-                    <a href="/login" className="bg-gradient-to-r from-blue-200 to-slate-400 bg-clip-text text-transparent text-sm font-bold">Login</a>
+                    <label className="text-gray-400 mb-2 text-sm font-medium">New to site?</label>
+                    <a href="/register" className="bg-gradient-to-r from-blue-200 to-slate-400 bg-clip-text text-transparent text-sm font-bold">Register</a>
                 </div>
-                <label className="text-gray-400 mb-2 text-sm font-medium">Name</label>
-                <input 
-                    type="text" 
-                    placeholder="Username" 
-                    className="rounded-lg p-3 mb-6 bg-black border border-zinc-800 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent transition duration-200"
-                />
+
                 
                 <label className="text-gray-400 mb-2 text-sm font-medium">Email</label>
                 <input 
@@ -34,7 +29,7 @@ function Register() {
                         type="submit"
                         className="bg-black text-white py-3 px-8 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                     >
-                        Register
+                        Login
                     </button>
                 </div>
             </form>
@@ -42,4 +37,4 @@ function Register() {
     )
 }
 
-export default Register
+export default Login
