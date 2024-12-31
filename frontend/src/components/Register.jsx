@@ -1,15 +1,37 @@
 function Register() {
     return (
-        <div className="min-w-screen min-h-screen bg-gradient-to-r from-slate-800 to-slate-700 items-center flex justify-center">
-            <form className="flex flex-col w-[400px]">
-                <label className="text-white mb-2">Name</label>
-                <input type="text" placeholder="Username" className="rounded-md p-3 mb-5"/>
-                <label className="text-white mb-2">Email</label>
-                <input type="text" placeholder="Email" className="rounded-md p-3 mb-5"/>
-                <label className="text-white mb-2">Password</label>
-                <input type="password" placeholder="Password" className="rounded-md p-3 mb-5"/>
-                <div class="flex items-center justify-center">
-                    <button type="text" className="bg-white text-black p-3 rounded-xl font-bold w-[100px]">Submit</button>
+        <div className="min-w-screen min-h-screen bg-black flex items-center justify-center flex-col font-sans">
+            <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-6xl mb-16 font-bold tracking-tight">Yeld</h1>
+            
+            <form className="flex flex-col w-96 bg-zinc-950 p-8 rounded-2xl shadow-xl border border-zinc-900">
+                <label className="text-gray-400 mb-2 text-sm font-medium">Name</label>
+                <input 
+                    type="text" 
+                    placeholder="Username" 
+                    className="rounded-lg p-3 mb-6 bg-black border border-zinc-800 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent transition duration-200"
+                />
+                
+                <label className="text-gray-400 mb-2 text-sm font-medium">Email</label>
+                <input 
+                    type="email" 
+                    placeholder="Email" 
+                    className="rounded-lg p-3 mb-6 bg-black border border-zinc-800 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent transition duration-200"
+                />
+                
+                <label className="text-gray-400 mb-2 text-sm font-medium">Password</label>
+                <input 
+                    type="password" 
+                    placeholder="Password" 
+                    className="rounded-lg p-3 mb-8 bg-black border border-zinc-800 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent transition duration-200"
+                />
+                
+                <div className="flex items-center justify-center">
+                    <button 
+                        type="submit"
+                        className="bg-black text-white py-3 px-8 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                    >
+                        Register
+                    </button>
                 </div>
             </form>
         </div>
