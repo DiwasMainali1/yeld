@@ -1,4 +1,5 @@
 // server.js
+import cors from 'cors';
 import express from 'express';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
@@ -9,6 +10,7 @@ import { getDashboard } from './controllers/userController.js';
 dotenv.config();
 
 const app = express();
+app.use(cors());
 
 // Middleware
 app.use(express.json());  // Parse JSON bodies

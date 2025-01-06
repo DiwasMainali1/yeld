@@ -23,7 +23,7 @@ function Home() {
 
             <div className="max-w-6xl mx-auto mt-20 px-8">
                 <div className="text-center">
-                    <h2 className="text-5xl font-bold bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent mb-6">
+                    <h2 className="p-5 text-5xl font-bold bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent mb-6">
                         Master Your Time, Amplify Your Progress
                     </h2>
                     <p className="text-gray-400 text-xl mb-12 max-w-2xl mx-auto">
