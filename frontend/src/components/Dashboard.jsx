@@ -1,12 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, BarChart3, Calendar, Settings } from 'lucide-react';
 import Header from './Header';
 
 function Dashboard() {
     const [username, setUsername] = useState('');
-    const [time, setTime] = useState(25 * 60); // 25 minutes in seconds
+    const [time, setTime] = useState(10);
     const [isActive, setIsActive] = useState(false);
-    const [timerType, setTimerType] = useState('pomodoro'); // pomodoro, shortBreak, longBreak
+    const [timerType, setTimerType] = useState('pomodoro');
+    const [sessionCount, setSessionCount] = useState(0);
+    const [completedSessions, setCompletedSessions] = useState(0);
+    
+    // Create audio element for alarm
+    const [audio] = useState(new Audio('/notification.mp3'));
+
+    const switchToBreak = useCallback(() => {
+        // After 3 sessions, switch to long break
+        if (sessionCount === 3) {
+            setTimerType('longBreak');
+            setTime(40 * 60); // 40 minute long break
+            setSessionCount(0); // Reset session count
+        } else {
+            setTimerType('shortBreak');
+            setTime(10);
+        }
+        setIsActive(true);
+    }, [sessionCount]);
+
+    const switchToPomodoro = useCallback(() => {
+        setTimerType('pomodoro');
+        setTime(10);
+        setIsActive(true);
+    }, []);
 
     useEffect(() => {
         // Fetch user data
@@ -36,9 +60,18 @@ function Dashboard() {
             }, 1000);
         } else if (time === 0) {
             setIsActive(false);
+            audio.play().catch(error => console.error('Error playing alarm:', error));
+            
+            if (timerType === 'pomodoro') {
+                setSessionCount(prev => prev + 1);
+                setCompletedSessions(prev => prev + 1);
+                switchToBreak();
+            } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
+                switchToPomodoro();
+            }
         }
         return () => clearInterval(interval);
-    }, [isActive, time]);
+    }, [isActive, time, timerType, audio, switchToBreak, switchToPomodoro]);
 
     const toggleTimer = () => {
         setIsActive(!isActive);
@@ -48,13 +81,13 @@ function Dashboard() {
         setIsActive(false);
         switch(timerType) {
             case 'pomodoro':
-                setTime(25 * 60);
+                setTime(10);
                 break;
             case 'shortBreak':
-                setTime(5 * 60);
+                setTime(10);
                 break;
             case 'longBreak':
-                setTime(15 * 60);
+                setTime(40 * 60);
                 break;
             default:
                 setTime(25 * 60);
@@ -79,19 +112,19 @@ function Dashboard() {
                             <div className="flex justify-center mb-8">
                                 <div className="flex gap-4">
                                     <button 
-                                        onClick={() => {setTimerType('pomodoro'); setTime(25 * 60);}}
+                                        onClick={() => {setTimerType('pomodoro'); setTime(10);}}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'pomodoro' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Pomodoro
                                     </button>
                                     <button 
-                                        onClick={() => {setTimerType('shortBreak'); setTime(5 * 60);}}
+                                        onClick={() => {setTimerType('shortBreak'); setTime(10);}}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'shortBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Short Break
                                     </button>
                                     <button 
-                                        onClick={() => {setTimerType('longBreak'); setTime(15 * 60);}}
+                                        onClick={() => {setTimerType('longBreak'); setTime(40 * 60);}}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'longBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Long Break
@@ -128,7 +161,7 @@ function Dashboard() {
                             <BarChart3 className="w-6 h-6 text-gray-400" />
                             <div>
                                 <h3 className="text-gray-200 font-semibold">Today's Focus</h3>
-                                <p className="text-gray-400">2 hours</p>
+                                <p className="text-gray-400">{Math.floor(completedSessions * 25 / 60)} hours {(completedSessions * 25) % 60} mins</p>
                             </div>
                         </div>
                         
@@ -136,15 +169,15 @@ function Dashboard() {
                             <Calendar className="w-6 h-6 text-gray-400" />
                             <div>
                                 <h3 className="text-gray-200 font-semibold">Sessions</h3>
-                                <p className="text-gray-400">4 completed</p>
+                                <p className="text-gray-400">{completedSessions} completed</p>
                             </div>
                         </div>
                         
                         <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
                             <Settings className="w-6 h-6 text-gray-400" />
                             <div>
-                                <h3 className="text-gray-200 font-semibold">Settings</h3>
-                                <p className="text-gray-400">Customize timer</p>
+                                <h3 className="text-gray-200 font-semibold">Next Long Break</h3>
+                                <p className="text-gray-400">In {3 - sessionCount} sessions</p>
                             </div>
                         </div>
                     </div>
