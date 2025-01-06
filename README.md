@@ -21,6 +21,9 @@ Yeld is a minimalist productivity tool designed specifically for students who wa
   - Easy on the eyes
   - Distraction-free environment
 
+![Yeld Interface](./yeld_1.png)
+![Yeld Timer](./yeld_2.png)
+
 ## Coming Soon
 
 - Study session statistics
@@ -28,24 +31,6 @@ Yeld is a minimalist productivity tool designed specifically for students who wa
 - Study group features
 - Mobile app support
 - Custom study playlists
-
-## Getting Started
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/yeld.git
-```
-
-2. Install dependencies
-```bash
-cd yeld
-npm install
-```
-
-3. Start the development server
-```bash
-npm run dev
-```
 
 ## Tech Stack
 
