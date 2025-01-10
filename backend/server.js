@@ -1,11 +1,10 @@
-// server.js
 import cors from 'cors';
 import express from 'express';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
-import { getDashboard } from './controllers/userController.js';
+import { getDashboard, getProfile, updateSessionStats } from './controllers/userController.js';
 
 dotenv.config();
 
@@ -18,8 +17,10 @@ app.use(express.json());  // Parse JSON bodies
 // Auth routes
 app.use('/auth', userRoutes);  // Now /auth/login and /auth/register
 
-// Dashboard route
+// Protected routes
 app.get('/dashboard', protect, getDashboard);
+app.get('/profile', protect, getProfile);
+app.post('/session/complete', protect, updateSessionStats);
 
 // Home route
 app.get("/", (req, res) => {

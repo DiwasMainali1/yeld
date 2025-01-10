@@ -8,6 +8,10 @@ function Header({ username }) {
         localStorage.removeItem('userToken');
         navigate('/login');
     };
+    
+    const handleProfile = () => {
+        navigate('/profile');
+    }
 
     return (
         <nav className="w-full h-20 border-b border-zinc-800 flex items-center justify-between px-8 bg-black">
@@ -22,14 +26,24 @@ function Header({ username }) {
                     <span className="text-gray-200 font-medium">Welcome back, {username}</span>
                 </div>
             </div>
-            
-            <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-            >
-                <LogOut className="w-4 h-4" />
-                Logout
-            </button>
+            <div className='flex flex-row space-x-10'>
+                <button
+                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                    onClick={handleProfile}
+                >
+                    <User size={20} />
+                    Profile
+                </button>
+
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                </button>
+            </div>
+
         </nav>
     );
 }

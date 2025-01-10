@@ -4,36 +4,33 @@ import Header from './Header';
 
 function Dashboard() {
     const [username, setUsername] = useState('');
-    const [time, setTime] = useState(10);
+    const [time, setTime] = useState(25 * 60);
     const [isActive, setIsActive] = useState(false);
     const [timerType, setTimerType] = useState('pomodoro');
     const [sessionCount, setSessionCount] = useState(0);
     const [completedSessions, setCompletedSessions] = useState(0);
     
-    // Create audio element for alarm
     const [audio] = useState(new Audio('/notification.mp3'));
 
     const switchToBreak = useCallback(() => {
-        // After 3 sessions, switch to long break
-        if (sessionCount === 3) {
+        if (sessionCount === 2) {
             setTimerType('longBreak');
-            setTime(40 * 60); // 40 minute long break
-            setSessionCount(0); // Reset session count
+            setTime(40 * 60);
+            setSessionCount(0);
         } else {
             setTimerType('shortBreak');
-            setTime(10);
+            setTime(5 * 60);
         }
         setIsActive(true);
     }, [sessionCount]);
 
     const switchToPomodoro = useCallback(() => {
         setTimerType('pomodoro');
-        setTime(10);
+        setTime(25 * 60);
         setIsActive(true);
     }, []);
 
     useEffect(() => {
-        // Fetch user data
         const fetchUser = async () => {
             try {
                 const token = localStorage.getItem('userToken');
@@ -65,6 +62,7 @@ function Dashboard() {
             if (timerType === 'pomodoro') {
                 setSessionCount(prev => prev + 1);
                 setCompletedSessions(prev => prev + 1);
+                
                 switchToBreak();
             } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
                 switchToPomodoro();
@@ -81,10 +79,10 @@ function Dashboard() {
         setIsActive(false);
         switch(timerType) {
             case 'pomodoro':
-                setTime(10);
+                setTime(25 * 60);
                 break;
             case 'shortBreak':
-                setTime(10);
+                setTime(5 * 60);
                 break;
             case 'longBreak':
                 setTime(40 * 60);
@@ -106,19 +104,18 @@ function Dashboard() {
             
             <div className="max-w-6xl mx-auto px-8 py-12">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    {/* Timer Section */}
                     <div className="lg:col-span-3">
                         <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
                             <div className="flex justify-center mb-8">
                                 <div className="flex gap-4">
                                     <button 
-                                        onClick={() => {setTimerType('pomodoro'); setTime(10);}}
+                                        onClick={() => {setTimerType('pomodoro'); setTime(25 * 60);}}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'pomodoro' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Pomodoro
                                     </button>
                                     <button 
-                                        onClick={() => {setTimerType('shortBreak'); setTime(10);}}
+                                        onClick={() => {setTimerType('shortBreak'); setTime(5 * 60);}}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'shortBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Short Break
@@ -155,7 +152,6 @@ function Dashboard() {
                         </div>
                     </div>
                     
-                    {/* Stats Section */}
                     <div className="lg:col-span-1 space-y-4">
                         <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
                             <BarChart3 className="w-6 h-6 text-gray-400" />
