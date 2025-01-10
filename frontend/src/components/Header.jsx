@@ -10,7 +10,7 @@ function Header({ username }) {
     };
     
     const handleProfile = () => {
-        navigate('/profile');
+        navigate(`/profile/${username}`);
     }
 
     return (

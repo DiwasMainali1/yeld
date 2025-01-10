@@ -19,7 +19,7 @@ app.use('/auth', userRoutes);  // Now /auth/login and /auth/register
 
 // Protected routes
 app.get('/dashboard', protect, getDashboard);
-app.get('/profile', protect, getProfile);
+app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
 
 // Home route

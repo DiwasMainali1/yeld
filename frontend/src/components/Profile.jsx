@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, Trophy, Timer } from 'lucide-react';
 import Header from './Header';
 
 const Profile = () => {
+    const { username } = useParams();
+    const navigate = useNavigate();
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -10,11 +13,20 @@ const Profile = () => {
         const fetchProfile = async () => {
             try {
                 const token = localStorage.getItem('userToken');
-                const response = await fetch('http://localhost:5000/profile', {
+                const response = await fetch(`http://localhost:5000/profile/${username}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        navigate('/404');  // Redirect to 404 page if user not found
+                        return;
+                    }
+                    throw new Error('Failed to fetch profile');
+                }
+                
                 const data = await response.json();
                 setProfileData(data);
             } catch (error) {
@@ -25,7 +37,7 @@ const Profile = () => {
         };
 
         fetchProfile();
-    }, []);
+    }, [username, navigate]);
 
     if (loading) {
         return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;

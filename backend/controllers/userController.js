@@ -89,35 +89,43 @@ const getDashboard = async (req, res) => {
 };
 const getProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id).select('-password');
+        const requestedUsername = req.params.username;
+        
+        // Find user by username instead of ID
+        const user = await User.findOne({ username: requestedUsername }).select('-password');
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        // Optional: Check if the requesting user is viewing their own profile
+        const isOwnProfile = req.user._id.toString() === user._id.toString();
+
         // Calculate milestone progress
         const hoursStudied = user.totalTimeStudied / 60;
-        let currentMilestone = 5;
+        let currentMilestone = 0;
         let progress = 0;
+        let nextMilestone = 5;
 
-        if (hoursStudied >= 100) {
-            currentMilestone = 100;
-            progress = 100;
-        } else if (hoursStudied >= 50) {
-            currentMilestone = 100;
-            progress = (hoursStudied - 50) * 2; // Progress towards 100
-        } else if (hoursStudied >= 20) {
+        if (hoursStudied >= 50) {
             currentMilestone = 50;
-            progress = (hoursStudied - 20) * (100/30); // Progress towards 50
-        } else if (hoursStudied >= 10) {
+            progress = 100;
+            nextMilestone = null;
+        } else if (hoursStudied >= 20) {
             currentMilestone = 20;
-            progress = (hoursStudied - 10) * 10; // Progress towards 20
-        } else if (hoursStudied >= 5) {
+            progress = (hoursStudied - 20) * (100/30);
+            nextMilestone = 50;
+        } else if (hoursStudied >= 10) {
             currentMilestone = 10;
-            progress = (hoursStudied - 5) * 20; // Progress towards 10
-        } else {
+            progress = (hoursStudied - 10) * 10;
+            nextMilestone = 20;
+        } else if (hoursStudied >= 5) {
             currentMilestone = 5;
-            progress = hoursStudied * 20; // Progress towards 5
+            progress = (hoursStudied - 5) * 20;
+            nextMilestone = 10;
+        } else {
+            progress = (hoursStudied / 5) * 100;
+            nextMilestone = 5;
         }
 
         res.json({
@@ -125,12 +133,9 @@ const getProfile = async (req, res) => {
             sessionsCompleted: user.sessionsCompleted,
             totalTimeStudied: user.totalTimeStudied,
             currentMilestone,
-            progress: Math.min(100, Math.max(0, progress)), // Ensure progress is between 0 and 100
-            nextMilestone: currentMilestone === 100 ? null : 
-                         currentMilestone === 50 ? 100 :
-                         currentMilestone === 20 ? 50 :
-                         currentMilestone === 10 ? 20 :
-                         currentMilestone === 5 ? 10 : 5
+            progress: Math.min(100, Math.max(0, progress)),
+            nextMilestone,
+            isOwnProfile
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
