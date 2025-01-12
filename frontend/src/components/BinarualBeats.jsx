@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Music } from 'lucide-react';
-import audio from '../music/focus-music.mp3'
+import { Play, Pause, Music, Volume2 } from 'lucide-react';
+import audio from '../music/focus-music.mp3';
 
 const BinauralBeats = () => {
     const [isBinauralPlaying, setIsBinauralPlaying] = useState(false);
-    const [binauralAudio] = useState(new Audio(audio));
+    const [volume, setVolume] = useState(0.5);
     const [particles, setParticles] = useState([]);
+    const [binauralAudio] = useState(() => {
+        const audioInstance = new Audio(audio);
+        audioInstance.preload = 'auto';
+        audioInstance.loop = true;
+        audioInstance.volume = 0.5;
+        return audioInstance;
+    });
 
-    // Create particles when audio starts
+    useEffect(() => {
+        return () => {
+            binauralAudio.pause();
+            binauralAudio.currentTime = 0;
+        };
+    }, [binauralAudio]);
+
     useEffect(() => {
         if (isBinauralPlaying) {
             const newParticles = Array.from({ length: 80 }, () => ({
@@ -23,7 +36,6 @@ const BinauralBeats = () => {
         }
     }, [isBinauralPlaying]);
 
-    // Animate particles
     useEffect(() => {
         if (!isBinauralPlaying) return;
 
@@ -34,7 +46,6 @@ const BinauralBeats = () => {
                 x: particle.x + Math.sin(particle.y * 0.1) * 0.2,
             })).filter(p => p.y > -10));
 
-            // Add new particles at the bottom
             if (Math.random() < 0.3) {
                 setParticles(prev => [...prev, {
                     id: Math.random(),
@@ -49,28 +60,32 @@ const BinauralBeats = () => {
         return () => clearInterval(interval);
     }, [isBinauralPlaying]);
 
-    // Clean up audio on unmount
     useEffect(() => {
-        return () => {
-            binauralAudio.pause();
-            binauralAudio.currentTime = 0;
-        };
-    }, [binauralAudio]);
+        binauralAudio.volume = volume;
+    }, [volume, binauralAudio]);
 
-    const toggleBinaural = () => {
-        if (isBinauralPlaying) {
-            binauralAudio.pause();
-        } else {
-            binauralAudio.play();
+    const handleVolumeChange = (e) => {
+        const newVolume = parseFloat(e.target.value);
+        setVolume(newVolume);
+    };
+
+    const toggleBinaural = async () => {
+        try {
+            if (isBinauralPlaying) {
+                await binauralAudio.pause();
+            } else {
+                await binauralAudio.play();
+            }
+            setIsBinauralPlaying(!isBinauralPlaying);
+        } catch (error) {
+            console.error('Error toggling audio:', error);
         }
-        setIsBinauralPlaying(!isBinauralPlaying);
     };
 
     return (
-        <>
-            {/* Particle overlay */}
+        <div className="relative">
             {isBinauralPlaying && (
-                <div className="fixed inset-0 pointer-events-none">
+                <div className="fixed inset-0 pointer-events-none z-10">
                     {particles.map(particle => (
                         <div
                             key={particle.id}
@@ -86,23 +101,46 @@ const BinauralBeats = () => {
                 </div>
             )}
 
-            {/* Control panel */}
-            <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
-                <Music className="w-6 h-6 text-gray-400" />
-                <div className="flex-1">
-                    <h3 className="text-gray-200 font-semibold">Focus Music</h3>
+            <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Music className="w-6 h-6 text-gray-400" />
+                        <div>
+                            <h3 className="text-gray-200 font-semibold">Focus Music</h3>
+                            <p className="text-gray-500 text-sm">Binaural Beats</p>
+                        </div>
+                    </div>
+                    
+                    <button
+                        onClick={toggleBinaural}
+                        className="bg-black text-white p-3 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                    >
+                        {isBinauralPlaying ? 
+                            <Pause className="w-4 h-4" /> : 
+                            <Play className="w-4 h-4" />
+                        }
+                    </button>
                 </div>
-                <button
-                    onClick={toggleBinaural}
-                    className="bg-black text-white p-3 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                >
-                    {isBinauralPlaying ? 
-                        <Pause className="w-4 h-4" /> : 
-                        <Play className="w-4 h-4" />
-                    }
-                </button>
+
+                <div className="flex items-center gap-3 pt-2">
+                    <Volume2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="w-full">
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            onChange={handleVolumeChange}
+                            className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                        />
+                    </div>
+                    <span className="text-xs text-gray-400 w-8">
+                        {Math.round(volume * 100)}%
+                    </span>
+                </div>
             </div>
-        </>
+        </div>
     );
 };
 

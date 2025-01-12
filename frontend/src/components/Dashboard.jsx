@@ -103,11 +103,11 @@ function Dashboard() {
     const switchToBreak = useCallback(() => {
         if (sessionCount === 2) {
             setTimerType('longBreak');
-            setTime(5);
+            setTime(50 * 60);
             setSessionCount(0);
         } else {
             setTimerType('shortBreak');
-            setTime(5);
+            setTime(5 * 60);
         }
         setIsActive(true);
         setSessionStarted(true);
