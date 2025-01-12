@@ -12,10 +12,10 @@ const app = express();
 app.use(cors());
 
 // Middleware
-app.use(express.json());  // Parse JSON bodies
+app.use(express.json());  
 
 // Auth routes
-app.use('/auth', userRoutes);  // Now /auth/login and /auth/register
+app.use('/auth', userRoutes); 
 
 // Protected routes
 app.get('/dashboard', protect, getDashboard);

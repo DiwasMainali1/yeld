@@ -6,11 +6,28 @@ function Dashboard() {
     const [username, setUsername] = useState('');
     const [time, setTime] = useState(25 * 60);
     const [isActive, setIsActive] = useState(false);
+    const [sessionStarted, setSessionStarted] = useState(false);
     const [timerType, setTimerType] = useState('pomodoro');
     const [sessionCount, setSessionCount] = useState(0);
     const [completedSessions, setCompletedSessions] = useState(0);
     
     const [audio] = useState(new Audio('/notification.mp3'));
+
+    useEffect(() => {
+        const handleBeforeUnload = (event) => {
+            if (sessionStarted) {
+                event.preventDefault();
+                event.returnValue = ''; 
+                return ''; 
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [sessionStarted]);
 
     const switchToBreak = useCallback(() => {
         if (sessionCount === 2) {
@@ -22,12 +39,14 @@ function Dashboard() {
             setTime(5 * 60);
         }
         setIsActive(true);
+        setSessionStarted(true);
     }, [sessionCount]);
 
     const switchToPomodoro = useCallback(() => {
         setTimerType('pomodoro');
         setTime(25 * 60);
         setIsActive(true);
+        setSessionStarted(true);
     }, []);
 
     useEffect(() => {
@@ -62,7 +81,6 @@ function Dashboard() {
             if (timerType === 'pomodoro') {
                 setSessionCount(prev => prev + 1);
                 setCompletedSessions(prev => prev + 1);
-                
                 switchToBreak();
             } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
                 switchToPomodoro();
@@ -72,11 +90,15 @@ function Dashboard() {
     }, [isActive, time, timerType, audio, switchToBreak, switchToPomodoro]);
 
     const toggleTimer = () => {
+        if (!isActive && !sessionStarted) {
+            setSessionStarted(true);
+        }
         setIsActive(!isActive);
     };
 
     const resetTimer = () => {
         setIsActive(false);
+        setSessionStarted(false);
         switch(timerType) {
             case 'pomodoro':
                 setTime(25 * 60);
@@ -92,6 +114,17 @@ function Dashboard() {
         }
     };
 
+    const handleTimerTypeChange = (type, duration) => {
+        if (sessionStarted) {
+            const confirmed = window.confirm('Changing timer type will reset your current session. Are you sure?');
+            if (!confirmed) return;
+        }
+        setTimerType(type);
+        setTime(duration);
+        setSessionStarted(false);
+        setIsActive(false);
+    };
+
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -100,8 +133,7 @@ function Dashboard() {
 
     return (
         <div className="min-h-screen bg-black font-sans">
-            <Header username={username} />
-            
+            <Header username={username} isTimerActive={sessionStarted} />
             <div className="max-w-6xl mx-auto px-8 py-12">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-3">
@@ -109,19 +141,19 @@ function Dashboard() {
                             <div className="flex justify-center mb-8">
                                 <div className="flex gap-4">
                                     <button 
-                                        onClick={() => {setTimerType('pomodoro'); setTime(25 * 60);}}
+                                        onClick={() => handleTimerTypeChange('pomodoro', 25 * 60)}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'pomodoro' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Pomodoro
                                     </button>
                                     <button 
-                                        onClick={() => {setTimerType('shortBreak'); setTime(5 * 60);}}
+                                        onClick={() => handleTimerTypeChange('shortBreak', 5 * 60)}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'shortBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Short Break
                                     </button>
                                     <button 
-                                        onClick={() => {setTimerType('longBreak'); setTime(40 * 60);}}
+                                        onClick={() => handleTimerTypeChange('longBreak', 40 * 60)}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'longBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Long Break

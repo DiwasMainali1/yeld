@@ -21,7 +21,7 @@ const Profile = () => {
                 
                 if (!response.ok) {
                     if (response.status === 404) {
-                        navigate('/404');  // Redirect to 404 page if user not found
+                        navigate('/404');  
                         return;
                     }
                     throw new Error('Failed to fetch profile');
@@ -48,6 +48,9 @@ const Profile = () => {
             <Header username={profileData?.username} />
             
             <div className="max-w-6xl mx-auto px-8 py-12">
+                <div className='text-white'>
+                    {profileData?.username}
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Stats Cards */}
                     <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl">

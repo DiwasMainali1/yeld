@@ -1,26 +1,43 @@
 import { useNavigate } from 'react-router-dom';
 import { User, LogOut } from 'lucide-react';
 
-function Header({ username }) {
+function Header({ username, isTimerActive }) {
     const navigate = useNavigate();
 
     const handleLogout = () => {
+        if (isTimerActive) {
+            const confirmed = window.confirm('You have an active session. Are you sure you want to logout?');
+            if (!confirmed) return;
+        }
         localStorage.removeItem('userToken');
         navigate('/login');
     };
     
     const handleProfile = () => {
+        if (isTimerActive) {
+            const confirmed = window.confirm('You have an active session. Are you sure you want to leave this page?');
+            if (!confirmed) return;
+        }
         navigate(`/profile/${username}`);
-    }
+    };
 
     return (
         <nav className="w-full h-20 border-b border-zinc-800 flex items-center justify-between px-8 bg-black">
             <div className="flex items-center gap-8">
-                <a href="/dashboard">
-                    <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-4xl font-bold tracking-tight hover:scale-105 transition-transform">
+                <button 
+                    onClick={() => {
+                        if (isTimerActive) {
+                            const confirmed = window.confirm('You have an active session. Are you sure you want to leave this page?');
+                            if (!confirmed) return;
+                        }
+                        navigate('/dashboard');
+                    }}
+                    className="hover:scale-105 transition-transform"
+                >
+                    <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-4xl font-bold tracking-tight">
                         Yeld
                     </h1>
-                </a>
+                </button>
                 <div className="flex items-center gap-2">
                     <User className="w-5 h-5 text-gray-400" />
                     <span className="text-gray-200 font-medium">Welcome back, {username}</span>
@@ -43,7 +60,6 @@ function Header({ username }) {
                     Logout
                 </button>
             </div>
-
         </nav>
     );
 }
