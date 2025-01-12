@@ -10,8 +10,78 @@ function Dashboard() {
     const [timerType, setTimerType] = useState('pomodoro');
     const [sessionCount, setSessionCount] = useState(0);
     const [completedSessions, setCompletedSessions] = useState(0);
+    const [totalTimeStudied, setTotalTimeStudied] = useState(0);
     
     const [audio] = useState(new Audio('/notification.mp3'));
+
+    const fetchUserStats = async (currentUsername) => {
+        try {
+            if (!currentUsername) return;
+            
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch user stats');
+            }
+            
+            const data = await response.json();
+            setTotalTimeStudied(data.totalTimeStudied);
+            setCompletedSessions(data.sessionsCompleted || 0);
+        } catch (error) {
+            console.error('Error fetching user stats:', error);
+        }
+    };
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const token = localStorage.getItem('userToken');
+                const response = await fetch('http://localhost:5000/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                setUsername(data.username);
+                // Fetch stats after getting username
+                if (data.username) {
+                    await fetchUserStats(data.username);
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            }
+        };
+
+        fetchUser();
+    }, []);
+
+    const updateUserStats = async () => {
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch('http://localhost:5000/session/complete', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to update user stats');
+            }
+            
+            const data = await response.json();
+            setTotalTimeStudied(data.totalTimeStudied);
+            setCompletedSessions(prev => prev + 1);
+        } catch (error) {
+            console.error('Error updating session stats:', error);
+        }
+    };
 
     useEffect(() => {
         const handleBeforeUnload = (event) => {
@@ -32,11 +102,11 @@ function Dashboard() {
     const switchToBreak = useCallback(() => {
         if (sessionCount === 2) {
             setTimerType('longBreak');
-            setTime(40 * 60);
+            setTime(5);
             setSessionCount(0);
         } else {
             setTimerType('shortBreak');
-            setTime(5 * 60);
+            setTime(5);
         }
         setIsActive(true);
         setSessionStarted(true);
@@ -44,28 +114,9 @@ function Dashboard() {
 
     const switchToPomodoro = useCallback(() => {
         setTimerType('pomodoro');
-        setTime(25 * 60);
+        setTime(5);
         setIsActive(true);
         setSessionStarted(true);
-    }, []);
-
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const token = localStorage.getItem('userToken');
-                const response = await fetch('http://localhost:5000/dashboard', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                setUsername(data.username);
-            } catch (error) {
-                console.error('Error fetching user data:', error);
-            }
-        };
-
-        fetchUser();
     }, []);
 
     useEffect(() => {
@@ -80,7 +131,7 @@ function Dashboard() {
             
             if (timerType === 'pomodoro') {
                 setSessionCount(prev => prev + 1);
-                setCompletedSessions(prev => prev + 1);
+                updateUserStats();
                 switchToBreak();
             } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
                 switchToPomodoro();
@@ -107,20 +158,32 @@ function Dashboard() {
                 setTime(5 * 60);
                 break;
             case 'longBreak':
-                setTime(40 * 60);
+                setTime(50 * 60);
                 break;
             default:
                 setTime(25 * 60);
         }
     };
 
-    const handleTimerTypeChange = (type, duration) => {
+    const handleTimerTypeChange = (type) => {
         if (sessionStarted) {
             const confirmed = window.confirm('Changing timer type will reset your current session. Are you sure?');
             if (!confirmed) return;
         }
         setTimerType(type);
-        setTime(duration);
+        switch(type) {
+            case 'pomodoro':
+                setTime(1500); // 25 minutes
+                break;
+            case 'shortBreak':
+                setTime(300); // 5 minutes
+                break;
+            case 'longBreak':
+                setTime(3000); // 50 minutes
+                break;
+            default:
+                setTime(1500);
+        }
         setSessionStarted(false);
         setIsActive(false);
     };
@@ -141,19 +204,19 @@ function Dashboard() {
                             <div className="flex justify-center mb-8">
                                 <div className="flex gap-4">
                                     <button 
-                                        onClick={() => handleTimerTypeChange('pomodoro', 25 * 60)}
+                                        onClick={() => handleTimerTypeChange('pomodoro')}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'pomodoro' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Pomodoro
                                     </button>
                                     <button 
-                                        onClick={() => handleTimerTypeChange('shortBreak', 5 * 60)}
+                                        onClick={() => handleTimerTypeChange('shortBreak')}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'shortBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Short Break
                                     </button>
                                     <button 
-                                        onClick={() => handleTimerTypeChange('longBreak', 40 * 60)}
+                                        onClick={() => handleTimerTypeChange('longBreak')}
                                         className={`px-4 py-2 rounded-lg ${timerType === 'longBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
                                     >
                                         Long Break

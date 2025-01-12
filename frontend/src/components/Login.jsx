@@ -15,31 +15,69 @@ function Login() {
         setError("")
         setIsLoading(true)
 
+        // Basic validation
+        if (!data.email || !data.password) {
+            setError("All fields are required")
+            setIsLoading(false)
+            return
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(data.email)) {
+            setError("Please enter a valid email address")
+            setIsLoading(false)
+            return
+        }
+
         try {
             const response = await fetch('http://localhost:5000/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    email: data.email.trim().toLowerCase(),
+                    password: data.password
+                })
             })
 
             const result = await response.json()
 
             if (!response.ok) {
-                throw new Error(result.message || 'Login failed')
+                if (response.status === 401) {
+                    throw new Error('Invalid email or password')
+                } else {
+                    throw new Error(result.message || 'Login failed')
+                }
             }
 
-            // Store the token in localStorage
+            // Store user data in localStorage
             localStorage.setItem('userToken', result.token)
+            localStorage.setItem('username', result.username)
+            
+            // Clear any existing session data
+            localStorage.setItem('completedSessions', '0')
+            localStorage.setItem('totalTimeStudied', '0')
             
             // Redirect to dashboard
             navigate('/dashboard')
         } catch (err) {
+            console.error('Login error:', err)
             setError(err.message)
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target
+        setData(prev => ({
+            ...prev,
+            [name]: value
+        }))
+        // Clear error when user starts typing
+        if (error) setError("")
     }
 
     return (
@@ -62,17 +100,19 @@ function Login() {
                 <label className="text-gray-400 mb-2 text-sm font-medium">Email</label>
                 <input 
                     type="email" 
+                    name="email"
                     value={data.email}
-                    onChange={(e) => setData({...data, email: e.target.value})}
+                    onChange={handleInputChange}
                     placeholder="Email" 
                     className="rounded-lg p-3 mb-6 bg-black border border-zinc-800 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent transition duration-200"
                 />
                 
                 <label className="text-gray-400 mb-2 text-sm font-medium">Password</label>
                 <input 
-                    type="password" 
+                    type="password"
+                    name="password"
                     value={data.password}
-                    onChange={(e) => setData({...data, password: e.target.value})}
+                    onChange={handleInputChange}
                     placeholder="Password" 
                     className="rounded-lg p-3 mb-8 bg-black border border-zinc-800 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent transition duration-200"
                 />

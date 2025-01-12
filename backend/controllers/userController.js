@@ -90,50 +90,49 @@ const getDashboard = async (req, res) => {
 const getProfile = async (req, res) => {
     try {
         const requestedUsername = req.params.username;
-        
-        // Find user by username instead of ID
         const user = await User.findOne({ username: requestedUsername }).select('-password');
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Optional: Check if the requesting user is viewing their own profile
         const isOwnProfile = req.user._id.toString() === user._id.toString();
 
-        // Calculate milestone progress
-        const hoursStudied = user.totalTimeStudied / 60;
+        // Convert minutes to hours for milestone calculations
+        const hoursStudied = user.totalTimeStudied / 60; // This gives us the exact hours (can be decimal)
         let currentMilestone = 0;
         let progress = 0;
         let nextMilestone = 5;
 
+        // Update milestone thresholds (in hours)
         if (hoursStudied >= 50) {
             currentMilestone = 50;
             progress = 100;
             nextMilestone = null;
         } else if (hoursStudied >= 20) {
             currentMilestone = 20;
-            progress = (hoursStudied - 20) * (100/30);
+            progress = ((hoursStudied - 20) / (50 - 20)) * 100; // Progress between 20 and 50 hours
             nextMilestone = 50;
         } else if (hoursStudied >= 10) {
             currentMilestone = 10;
-            progress = (hoursStudied - 10) * 10;
+            progress = ((hoursStudied - 10) / (20 - 10)) * 100; // Progress between 10 and 20 hours
             nextMilestone = 20;
         } else if (hoursStudied >= 5) {
             currentMilestone = 5;
-            progress = (hoursStudied - 5) * 20;
+            progress = ((hoursStudied - 5) / (10 - 5)) * 100; // Progress between 5 and 10 hours
             nextMilestone = 10;
         } else {
-            progress = (hoursStudied / 5) * 100;
+            // Progress from 0 to 5 hours
+            progress = (hoursStudied / 5) * 100; // This will now show the correct progress for early sessions
             nextMilestone = 5;
         }
 
         res.json({
             username: user.username,
             sessionsCompleted: user.sessionsCompleted,
-            totalTimeStudied: user.totalTimeStudied,
+            totalTimeStudied: user.totalTimeStudied, // This remains in minutes
             currentMilestone,
-            progress: Math.min(100, Math.max(0, progress)),
+            progress: Math.min(100, Math.max(0, Math.round(progress * 100) / 100)), // Rounds to 2 decimal places
             nextMilestone,
             isOwnProfile
         });
@@ -141,6 +140,7 @@ const getProfile = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
+
 
 // Add this to track completed sessions
 const updateSessionStats = async (req, res) => {

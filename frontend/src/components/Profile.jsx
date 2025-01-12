@@ -43,6 +43,26 @@ const Profile = () => {
         return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
     }
 
+    // Calculate the relative progress width based on the current milestone range
+    const getProgressWidth = () => {
+        const totalTimeInHours = profileData.totalTimeStudied / 60;
+        let progressWidth = 0;
+        
+        if (totalTimeInHours >= 50) {
+            progressWidth = 100;
+        } else if (totalTimeInHours >= 20) {
+            progressWidth = 75 + ((totalTimeInHours - 20) / 30) * 25; // 75% + progress to 50h
+        } else if (totalTimeInHours >= 10) {
+            progressWidth = 50 + ((totalTimeInHours - 10) / 10) * 25; // 50% + progress to 20h
+        } else if (totalTimeInHours >= 5) {
+            progressWidth = 25 + ((totalTimeInHours - 5) / 5) * 25; // 25% + progress to 10h
+        } else {
+            progressWidth = (totalTimeInHours / 5) * 25; // Progress to 5h (25% of total width)
+        }
+        
+        return `${Math.min(100, Math.max(0, progressWidth))}%`;
+    };
+
     return (
         <div className="min-h-screen bg-black font-sans">
             <Header username={profileData?.username} />
@@ -92,7 +112,7 @@ const Profile = () => {
                             <div className="w-full bg-zinc-900 rounded-full h-4 mb-8">
                                 <div 
                                     className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-500"
-                                    style={{ width: `${profileData?.progress}%` }}
+                                    style={{ width: getProgressWidth() }}
                                 ></div>
                             </div>
                             
