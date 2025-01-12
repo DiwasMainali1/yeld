@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, BarChart3, Calendar, Settings } from 'lucide-react';
 import Header from './Header';
+import BinauralBeats from './BinarualBeats';
 
 function Dashboard() {
     const [username, setUsername] = useState('');
@@ -248,6 +249,7 @@ function Dashboard() {
                     </div>
                     
                     <div className="lg:col-span-1 space-y-4">
+                        <BinauralBeats />
                         <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
                             <BarChart3 className="w-6 h-6 text-gray-400" />
                             <div>
