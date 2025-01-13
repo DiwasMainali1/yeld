@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, BarChart3, Calendar, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Pause, RotateCcw } from 'lucide-react';
 import Header from './Header';
-import BinauralBeats from './BinarualBeats';
+import MusicPlayer from './MusicPlayer';
+import QuoteSection from './QuoteSection';
 
 function Dashboard() {
     const [username, setUsername] = useState('');
@@ -9,26 +10,32 @@ function Dashboard() {
     const [isActive, setIsActive] = useState(false);
     const [sessionStarted, setSessionStarted] = useState(false);
     const [timerType, setTimerType] = useState('pomodoro');
-    const [sessionCount, setSessionCount] = useState(0);
-    const [completedSessions, setCompletedSessions] = useState(0);
     const [totalTimeStudied, setTotalTimeStudied] = useState(0);
-    const [lastResetDate, setLastResetDate] = useState(null);
+    const [completedSessions, setCompletedSessions] = useState(0);
     const [audio] = useState(new Audio('/notification.mp3'));
 
-    const getSydneyDate = () => {
-        return new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' });
-    };
-
-    const checkAndResetDaily = () => {
-        const sydneyDate = new Date(getSydneyDate());
-        const currentDateStr = sydneyDate.toDateString();
-        if (!lastResetDate || lastResetDate !== currentDateStr) {
-            setCompletedSessions(0);
-            setLastResetDate(currentDateStr);
-            localStorage.setItem('lastResetDate', currentDateStr);
-            localStorage.setItem('dailyCompletedSessions', '0');
-        }
-    };
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const token = localStorage.getItem('userToken');
+                const response = await fetch('http://localhost:5000/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                const data = await response.json();
+                setUsername(data.username);
+                localStorage.setItem('username', data.username);
+                await fetchUserStats(data.username);
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            }
+        };
+        fetchUser();
+    }, []);
 
     const fetchUserStats = async (currentUsername) => {
         try {
@@ -44,44 +51,11 @@ function Dashboard() {
             }
             const data = await response.json();
             setTotalTimeStudied(data.totalTimeStudied);
-            checkAndResetDaily();
-            const storedSessions = localStorage.getItem('dailyCompletedSessions');
-            if (storedSessions !== null) {
-                setCompletedSessions(parseInt(storedSessions, 10));
-            }
+            setCompletedSessions(data.sessionsCompleted || 0);
         } catch (error) {
             console.error('Error fetching user stats:', error);
         }
     };
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            checkAndResetDaily();
-        }, 60000);
-        checkAndResetDaily();
-        return () => clearInterval(interval);
-    }, [lastResetDate]);
-
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const token = localStorage.getItem('userToken');
-                const response = await fetch('http://localhost:5000/dashboard', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                setUsername(data.username);
-                if (data.username) {
-                    await fetchUserStats(data.username);
-                }
-            } catch (error) {
-                console.error('Error fetching user data:', error);
-            }
-        };
-        fetchUser();
-    }, []);
 
     const updateUserStats = async () => {
         try {
@@ -98,9 +72,7 @@ function Dashboard() {
             }
             const data = await response.json();
             setTotalTimeStudied(data.totalTimeStudied);
-            const newCompletedSessions = completedSessions + 1;
-            setCompletedSessions(newCompletedSessions);
-            localStorage.setItem('dailyCompletedSessions', newCompletedSessions.toString());
+            setCompletedSessions(prev => prev + 1);
         } catch (error) {
             console.error('Error updating session stats:', error);
         }
@@ -120,26 +92,6 @@ function Dashboard() {
         };
     }, [sessionStarted]);
 
-    const switchToBreak = useCallback(() => {
-        if (sessionCount === 2) {
-            setTimerType('longBreak');
-            setTime(50 * 60);
-            setSessionCount(0);
-        } else {
-            setTimerType('shortBreak');
-            setTime(5 * 60);
-        }
-        setIsActive(true);
-        setSessionStarted(true);
-    }, [sessionCount]);
-
-    const switchToPomodoro = useCallback(() => {
-        setTimerType('pomodoro');
-        setTime(25 * 60);
-        setIsActive(true);
-        setSessionStarted(true);
-    }, []);
-
     useEffect(() => {
         let interval = null;
         if (isActive && time > 0) {
@@ -148,17 +100,14 @@ function Dashboard() {
             }, 1000);
         } else if (time === 0) {
             setIsActive(false);
+            setSessionStarted(false);
             audio.play().catch(error => console.error('Error playing alarm:', error));
             if (timerType === 'pomodoro') {
-                setSessionCount(prev => prev + 1);
                 updateUserStats();
-                switchToBreak();
-            } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
-                switchToPomodoro();
             }
         }
         return () => clearInterval(interval);
-    }, [isActive, time, timerType, audio, switchToBreak, switchToPomodoro]);
+    }, [isActive, time, timerType, audio]);
 
     const toggleTimer = () => {
         if (!isActive && !sessionStarted) {
@@ -215,57 +164,73 @@ function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-black font-sans">
+        <div className="min-h-screen bg-black font-sans select-none">
             <Header username={username} isTimerActive={sessionStarted} />
-            <div className="max-w-6xl mx-auto px-8 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-3">
+            <div className="max-w-7xl mx-auto px-8 py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2">
                         <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
-                            <div className="flex justify-center mb-8">
-                                <div className="flex gap-4">
+                            <div className="flex justify-center mb-12">
+                                <div className="flex gap-4 bg-zinc-900 p-1 rounded-lg">
                                     <button 
                                         onClick={() => handleTimerTypeChange('pomodoro')}
-                                        className={`px-4 py-2 rounded-lg ${timerType === 'pomodoro' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
+                                        className={`px-6 py-2 rounded-lg transition-colors ${
+                                            timerType === 'pomodoro' 
+                                                ? 'bg-zinc-800 text-white' 
+                                                : 'text-gray-400 hover:text-white'
+                                        }`}
                                     >
                                         Pomodoro
                                     </button>
                                     <button 
                                         onClick={() => handleTimerTypeChange('shortBreak')}
-                                        className={`px-4 py-2 rounded-lg ${timerType === 'shortBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
+                                        className={`px-6 py-2 rounded-lg transition-colors ${
+                                            timerType === 'shortBreak' 
+                                                ? 'bg-zinc-800 text-white' 
+                                                : 'text-gray-400 hover:text-white'
+                                        }`}
                                     >
                                         Short Break
                                     </button>
                                     <button 
                                         onClick={() => handleTimerTypeChange('longBreak')}
-                                        className={`px-4 py-2 rounded-lg ${timerType === 'longBreak' ? 'bg-zinc-800 text-white' : 'text-gray-400'}`}
+                                        className={`px-6 py-2 rounded-lg transition-colors ${
+                                            timerType === 'longBreak' 
+                                                ? 'bg-zinc-800 text-white' 
+                                                : 'text-gray-400 hover:text-white'
+                                        }`}
                                     >
                                         Long Break
                                     </button>
                                 </div>
                             </div>
-                            <div className="text-center mb-8">
-                                <h2 className="text-8xl font-bold text-gray-200 font-mono">
+                            <div className="text-center mb-12">
+                                <h2 className="text-8xl font-bold text-white font-mono tracking-widest">
                                     {formatTime(time)}
                                 </h2>
                             </div>
-                            <div className="flex justify-center gap-4">
+                            <div className="flex justify-center gap-6">
                                 <button
                                     onClick={toggleTimer}
-                                    className="bg-black text-white p-4 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                                    className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                                 >
-                                    {isActive ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                                    {isActive ? 
+                                        <Pause className="w-8 h-8" /> : 
+                                        <Play className="w-8 h-8" />
+                                    }
                                 </button>
                                 <button
                                     onClick={resetTimer}
-                                    className="bg-black text-white p-4 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                                    className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                                 >
-                                    <RotateCcw className="w-6 h-6" />
+                                    <RotateCcw className="w-8 h-8" />
                                 </button>
                             </div>
                         </div>
                     </div>
                     <div className="lg:col-span-1 space-y-4">
-                        <BinauralBeats />
+                        <MusicPlayer />
+                        <QuoteSection />
                     </div>
                 </div>
             </div>
