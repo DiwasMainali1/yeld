@@ -12,31 +12,55 @@ function Dashboard() {
     const [sessionCount, setSessionCount] = useState(0);
     const [completedSessions, setCompletedSessions] = useState(0);
     const [totalTimeStudied, setTotalTimeStudied] = useState(0);
-    
+    const [lastResetDate, setLastResetDate] = useState(null);
     const [audio] = useState(new Audio('/notification.mp3'));
+
+    const getSydneyDate = () => {
+        return new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' });
+    };
+
+    const checkAndResetDaily = () => {
+        const sydneyDate = new Date(getSydneyDate());
+        const currentDateStr = sydneyDate.toDateString();
+        if (!lastResetDate || lastResetDate !== currentDateStr) {
+            setCompletedSessions(0);
+            setLastResetDate(currentDateStr);
+            localStorage.setItem('lastResetDate', currentDateStr);
+            localStorage.setItem('dailyCompletedSessions', '0');
+        }
+    };
 
     const fetchUserStats = async (currentUsername) => {
         try {
             if (!currentUsername) return;
-            
             const token = localStorage.getItem('userToken');
             const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-            
             if (!response.ok) {
                 throw new Error('Failed to fetch user stats');
             }
-            
             const data = await response.json();
             setTotalTimeStudied(data.totalTimeStudied);
-            setCompletedSessions(data.sessionsCompleted || 0);
+            checkAndResetDaily();
+            const storedSessions = localStorage.getItem('dailyCompletedSessions');
+            if (storedSessions !== null) {
+                setCompletedSessions(parseInt(storedSessions, 10));
+            }
         } catch (error) {
             console.error('Error fetching user stats:', error);
         }
     };
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            checkAndResetDaily();
+        }, 60000);
+        checkAndResetDaily();
+        return () => clearInterval(interval);
+    }, [lastResetDate]);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -49,7 +73,6 @@ function Dashboard() {
                 });
                 const data = await response.json();
                 setUsername(data.username);
-                // Fetch stats after getting username
                 if (data.username) {
                     await fetchUserStats(data.username);
                 }
@@ -57,7 +80,6 @@ function Dashboard() {
                 console.error('Error fetching user data:', error);
             }
         };
-
         fetchUser();
     }, []);
 
@@ -71,14 +93,14 @@ function Dashboard() {
                     'Content-Type': 'application/json'
                 }
             });
-            
             if (!response.ok) {
                 throw new Error('Failed to update user stats');
             }
-            
             const data = await response.json();
             setTotalTimeStudied(data.totalTimeStudied);
-            setCompletedSessions(prev => prev + 1);
+            const newCompletedSessions = completedSessions + 1;
+            setCompletedSessions(newCompletedSessions);
+            localStorage.setItem('dailyCompletedSessions', newCompletedSessions.toString());
         } catch (error) {
             console.error('Error updating session stats:', error);
         }
@@ -88,13 +110,11 @@ function Dashboard() {
         const handleBeforeUnload = (event) => {
             if (sessionStarted) {
                 event.preventDefault();
-                event.returnValue = ''; 
-                return ''; 
+                event.returnValue = '';
+                return '';
             }
         };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
@@ -115,7 +135,7 @@ function Dashboard() {
 
     const switchToPomodoro = useCallback(() => {
         setTimerType('pomodoro');
-        setTime(5);
+        setTime(25 * 60);
         setIsActive(true);
         setSessionStarted(true);
     }, []);
@@ -129,7 +149,6 @@ function Dashboard() {
         } else if (time === 0) {
             setIsActive(false);
             audio.play().catch(error => console.error('Error playing alarm:', error));
-            
             if (timerType === 'pomodoro') {
                 setSessionCount(prev => prev + 1);
                 updateUserStats();
@@ -174,16 +193,16 @@ function Dashboard() {
         setTimerType(type);
         switch(type) {
             case 'pomodoro':
-                setTime(1500); // 25 minutes
+                setTime(25 * 60);
                 break;
             case 'shortBreak':
-                setTime(300); // 5 minutes
+                setTime(5 * 60);
                 break;
             case 'longBreak':
-                setTime(3000); // 50 minutes
+                setTime(50 * 60);
                 break;
             default:
-                setTime(1500);
+                setTime(25 * 60);
         }
         setSessionStarted(false);
         setIsActive(false);
@@ -224,13 +243,11 @@ function Dashboard() {
                                     </button>
                                 </div>
                             </div>
-                            
                             <div className="text-center mb-8">
                                 <h2 className="text-8xl font-bold text-gray-200 font-mono">
                                     {formatTime(time)}
                                 </h2>
                             </div>
-                            
                             <div className="flex justify-center gap-4">
                                 <button
                                     onClick={toggleTimer}
@@ -247,17 +264,18 @@ function Dashboard() {
                             </div>
                         </div>
                     </div>
-                    
                     <div className="lg:col-span-1 space-y-4">
                         <BinauralBeats />
                         <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
                             <BarChart3 className="w-6 h-6 text-gray-400" />
                             <div>
                                 <h3 className="text-gray-200 font-semibold">Today's Focus</h3>
-                                <p className="text-gray-400">{Math.floor(completedSessions * 25 / 60)} hours {(completedSessions * 25) % 60} mins</p>
+                                <p className="text-gray-400">
+                                    {Math.floor(completedSessions * 25 / 60)} hours {(completedSessions * 25) % 60} mins
+                                </p>
+                                <p className="text-xs text-gray-500">Sydney Time</p>
                             </div>
                         </div>
-                        
                         <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
                             <Calendar className="w-6 h-6 text-gray-400" />
                             <div>
@@ -265,7 +283,6 @@ function Dashboard() {
                                 <p className="text-gray-400">{completedSessions} completed</p>
                             </div>
                         </div>
-                        
                         <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
                             <Settings className="w-6 h-6 text-gray-400" />
                             <div>
