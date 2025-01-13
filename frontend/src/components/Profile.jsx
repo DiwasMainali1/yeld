@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, Trophy, Timer } from 'lucide-react';
+import { Clock, Trophy, Timer, User } from 'lucide-react';
 import Header from './Header';
 
 const Profile = () => {
@@ -8,6 +8,22 @@ const Profile = () => {
     const navigate = useNavigate();
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const titles = {
+        novice: { hours: 0, name: "Learning Novice", description: "Taking the first steps into the learning journey" },
+        apprentice: { hours: 5, name: "Knowledge Apprentice", description: "Building foundational study habits" },
+        scholar: { hours: 10, name: "Dedicated Scholar", description: "Mastering the art of focused learning" },
+        sage: { hours: 20, name: "Wisdom Sage", description: "Demonstrating exceptional dedication to growth" },
+        master: { hours: 50, name: "Learning Master", description: "Achieved mastery in sustained learning" }
+    };
+
+    const getCurrentTitle = (hours) => {
+        if (hours >= 50) return titles.master;
+        if (hours >= 20) return titles.sage;
+        if (hours >= 10) return titles.scholar;
+        if (hours >= 5) return titles.apprentice;
+        return titles.novice;
+    };
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -21,7 +37,7 @@ const Profile = () => {
                 
                 if (!response.ok) {
                     if (response.status === 404) {
-                        navigate('/404');  
+                        navigate('/404');
                         return;
                     }
                     throw new Error('Failed to fetch profile');
@@ -43,7 +59,9 @@ const Profile = () => {
         return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
     }
 
-    // Calculate the relative progress width based on the current milestone range
+    const totalHours = Math.floor(profileData?.totalTimeStudied / 60);
+    const currentTitle = getCurrentTitle(totalHours);
+
     const getProgressWidth = () => {
         const totalTimeInHours = profileData.totalTimeStudied / 60;
         let progressWidth = 0;
@@ -51,13 +69,13 @@ const Profile = () => {
         if (totalTimeInHours >= 50) {
             progressWidth = 100;
         } else if (totalTimeInHours >= 20) {
-            progressWidth = 75 + ((totalTimeInHours - 20) / 30) * 25; // 75% + progress to 50h
+            progressWidth = 75 + ((totalTimeInHours - 20) / 30) * 25;
         } else if (totalTimeInHours >= 10) {
-            progressWidth = 50 + ((totalTimeInHours - 10) / 10) * 25; // 50% + progress to 20h
+            progressWidth = 50 + ((totalTimeInHours - 10) / 10) * 25;
         } else if (totalTimeInHours >= 5) {
-            progressWidth = 25 + ((totalTimeInHours - 5) / 5) * 25; // 25% + progress to 10h
+            progressWidth = 25 + ((totalTimeInHours - 5) / 5) * 25;
         } else {
-            progressWidth = (totalTimeInHours / 5) * 25; // Progress to 5h (25% of total width)
+            progressWidth = (totalTimeInHours / 5) * 25;
         }
         
         return `${Math.min(100, Math.max(0, progressWidth))}%`;
@@ -68,11 +86,30 @@ const Profile = () => {
             <Header username={profileData?.username} />
             
             <div className="max-w-6xl mx-auto px-8 py-12">
-                <div className='text-white'>
-                    {profileData?.username}
+                {/* Profile Header */}
+                <div className="bg-zinc-950 rounded-2xl border border-zinc-900 shadow-xl p-8 mb-8">
+                    <div className="flex items-start gap-8">
+                        <div className="w-32 h-32 bg-zinc-900 rounded-full flex items-center justify-center">
+                            <User className="w-16 h-16 text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                            <h1 className="text-3xl font-bold text-white mb-2">{profileData?.username}</h1>
+                        </div>
+                    </div>
                 </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Stats Cards */}
+                    <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl">
+                        <div className="flex items-center gap-4">
+                            <Trophy className="w-8 h-8 text-gray-400" />
+                            <div>
+                                <h3 className="text-gray-200 font-semibold">Current Title</h3>
+                                <p className="text-2xl font-bold text-gray-100">{currentTitle.name}</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl">
                         <div className="flex items-center gap-4">
                             <Timer className="w-8 h-8 text-gray-400" />
@@ -95,57 +132,46 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl">
-                        <div className="flex items-center gap-4">
-                            <Trophy className="w-8 h-8 text-gray-400" />
-                            <div>
-                                <h3 className="text-gray-200 font-semibold">Current Milestone</h3>
-                                <p className="text-2xl font-bold text-gray-100">{profileData?.currentMilestone} hours</p>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Milestone Progress */}
                     <div className="lg:col-span-3 bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
-                        <h2 className="text-xl font-bold text-gray-200 mb-6">Progress to Next Milestone</h2>
+                        <h2 className="text-xl font-bold text-gray-200 mb-8">Journey Progress</h2>
                         <div className="relative">
-                            <div className="w-full bg-zinc-900 rounded-full h-4 mb-8">
+                            {/* Progress Bar */}
+                            <div className="w-full bg-zinc-900 h-2 mb-8 relative">
                                 <div 
-                                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-500"
+                                    className="absolute top-0 left-0 h-2 bg-blue-500"
                                     style={{ width: getProgressWidth() }}
                                 ></div>
+                                
+                                {/* Milestone Ticks */}
+                                <div className="absolute top-1/2 left-0 w-0.5 h-4 bg-zinc-800 -translate-y-1/2"></div>
+                                <div className="absolute top-1/2 left-1/4 w-0.5 h-4 bg-zinc-800 -translate-y-1/2"></div>
+                                <div className="absolute top-1/2 left-1/2 w-0.5 h-4 bg-zinc-800 -translate-y-1/2"></div>
+                                <div className="absolute top-1/2 left-3/4 w-0.5 h-4 bg-zinc-800 -translate-y-1/2"></div>
+                                <div className="absolute top-1/2 right-0 w-0.5 h-4 bg-zinc-800 -translate-y-1/2"></div>
                             </div>
                             
-                            {/* Milestone Markers */}
-                            <div className="absolute w-full flex justify-between -bottom-6">
-                                {/* 0 hours marker */}
-                                <div className="flex flex-col items-center">
-                                    <div className="w-1 h-4 bg-zinc-700 mb-2"></div>
-                                    <span className="text-sm text-gray-400">0h</span>
+                            {/* Labels */}
+                            <div className="flex justify-between -mx-4">
+                                <div className="flex flex-col items-center px-1">
+                                    <span className="text-sm font-medium text-zinc-400">Novice</span>
+                                    <span className="text-xs text-zinc-600">0h</span>
                                 </div>
-                                
-                                {/* 5 hours marker (1/4) */}
-                                <div className="flex flex-col items-center" style={{ position: 'absolute', left: '25%', transform: 'translateX(-50%)' }}>
-                                    <div className="w-1 h-4 bg-zinc-700 mb-2"></div>
-                                    <span className="text-sm text-gray-400">5h</span>
+                                <div className="flex flex-col items-center px-1">
+                                    <span className="text-sm font-medium text-zinc-400">Apprentice</span>
+                                    <span className="text-xs text-zinc-600">5h</span>
                                 </div>
-                                
-                                {/* 10 hours marker (1/2) */}
-                                <div className="flex flex-col items-center" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-                                    <div className="w-1 h-4 bg-zinc-700 mb-2"></div>
-                                    <span className="text-sm text-gray-400">10h</span>
+                                <div className="flex flex-col items-center px-3">
+                                    <span className="text-sm font-medium text-zinc-400">Scholar</span>
+                                    <span className="text-xs text-zinc-600">10h</span>
                                 </div>
-                                
-                                {/* 20 hours marker (3/4) */}
-                                <div className="flex flex-col items-center" style={{ position: 'absolute', left: '75%', transform: 'translateX(-50%)' }}>
-                                    <div className="w-1 h-4 bg-zinc-700 mb-2"></div>
-                                    <span className="text-sm text-gray-400">20h</span>
+                                <div className="flex flex-col items-center px-5">
+                                    <span className="text-sm font-medium text-zinc-400">Sage</span>
+                                    <span className="text-xs text-zinc-600">20h</span>
                                 </div>
-                                
-                                {/* 50 hours marker (final) */}
-                                <div className="flex flex-col items-center">
-                                    <div className="w-1 h-4 bg-zinc-700 mb-2"></div>
-                                    <span className="text-sm text-gray-400">50h</span>
+                                <div className="flex flex-col items-center px-1">
+                                    <span className="text-sm font-medium text-zinc-400">Master</span>
+                                    <span className="text-xs text-zinc-600">50h</span>
                                 </div>
                             </div>
                         </div>
