@@ -266,30 +266,6 @@ function Dashboard() {
                     </div>
                     <div className="lg:col-span-1 space-y-4">
                         <BinauralBeats />
-                        <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
-                            <BarChart3 className="w-6 h-6 text-gray-400" />
-                            <div>
-                                <h3 className="text-gray-200 font-semibold">Today's Focus</h3>
-                                <p className="text-gray-400">
-                                    {Math.floor(completedSessions * 25 / 60)} hours {(completedSessions * 25) % 60} mins
-                                </p>
-                                <p className="text-xs text-gray-500">Sydney Time</p>
-                            </div>
-                        </div>
-                        <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
-                            <Calendar className="w-6 h-6 text-gray-400" />
-                            <div>
-                                <h3 className="text-gray-200 font-semibold">Sessions</h3>
-                                <p className="text-gray-400">{completedSessions} completed</p>
-                            </div>
-                        </div>
-                        <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl flex items-center gap-4">
-                            <Settings className="w-6 h-6 text-gray-400" />
-                            <div>
-                                <h3 className="text-gray-200 font-semibold">Next Long Break</h3>
-                                <p className="text-gray-400">In {3 - sessionCount} sessions</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
