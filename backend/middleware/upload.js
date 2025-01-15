@@ -1,4 +1,3 @@
-// middleware/upload.js
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,9 +10,21 @@ const storage = multer.diskStorage({
         cb(null, path.join(__dirname, '../uploads/'));
     },
     filename: function(req, file, cb) {
-        // Create unique filename with user ID and timestamp
-        const uniqueSuffix = `${req.user._id}-${Date.now()}`;
-        cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
+        // Get username from request parameters
+        const username = req.params.username;
+        if (!username) {
+            return cb(new Error('Username is required for file upload'), null);
+        }
+
+        // Create unique filename with username and timestamp
+        const timestamp = Date.now();
+        const cleanUsername = username.replace(/[^a-zA-Z0-9]/g, ''); // Remove special characters
+        const uniqueSuffix = `${cleanUsername}-${timestamp}`;
+        
+        // Add a random string to ensure uniqueness
+        const randomString = Math.random().toString(36).substring(2, 8);
+        
+        cb(null, `${uniqueSuffix}-${randomString}${path.extname(file.originalname).toLowerCase()}`);
     }
 });
 

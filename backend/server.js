@@ -48,7 +48,7 @@ app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
 
 // Profile update routes
-app.post('/profile/photo', protect, upload.single('photo'), updateProfilePhoto);
+app.put('/profile/:username/photo', protect, upload.single('photo'), updateProfilePhoto);
 app.put('/profile/bio', protect, updateBio);
 
 // Home route

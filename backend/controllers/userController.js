@@ -94,6 +94,8 @@ const getDashboard = async (req, res) => {
 const updateProfilePhoto = async (req, res) => {
     try {
         const requestedUsername = req.params.username;
+        
+        // Find user by username
         const user = await User.findOne({ username: requestedUsername });
         
         if (!user) {
@@ -109,13 +111,23 @@ const updateProfilePhoto = async (req, res) => {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        // Create the photo URL
-        const photoUrl = `/uploads/${req.file.filename}`;
+        // Create the photo URL - Make sure to include the full path
+        const photoUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+        
+        // Log the file details for debugging
+        console.log('File details:', {
+            filename: req.file.filename,
+            path: req.file.path,
+            photoUrl: photoUrl
+        });
+
+        // Update user's profile photo
         user.profilePhoto = photoUrl;
         await user.save();
 
         res.json({
-            profilePhoto: user.profilePhoto
+            profilePhoto: user.profilePhoto,
+            message: 'Photo uploaded successfully'
         });
     } catch (error) {
         console.error('Photo upload error:', error);

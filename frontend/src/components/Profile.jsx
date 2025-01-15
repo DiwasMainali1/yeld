@@ -85,15 +85,24 @@ const Profile = () => {
                 body: formData
             });
     
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to upload image');
-            }
-            
             const data = await response.json();
-            setProfileData(prev => ({ ...prev, profilePhoto: data.profilePhoto }));
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to upload image');
+            }
+    
+            // Log the response for debugging
+            console.log('Upload response:', data);
+            
+            if (data.profilePhoto) {
+                setProfileData(prev => ({ 
+                    ...prev, 
+                    profilePhoto: data.profilePhoto 
+                }));
+            }
         } catch (error) {
             console.error('Error uploading photo:', error);
+            alert(error.message || 'Failed to upload photo');
         } finally {
             setUploading(false);
         }
