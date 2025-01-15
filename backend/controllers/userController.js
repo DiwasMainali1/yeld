@@ -87,6 +87,42 @@ const getDashboard = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
+
+// @desc    Update user profile photo
+// @route   PUT /profile/photo
+// @access  Private
+const updateProfilePhoto = async (req, res) => {
+    try {
+        const requestedUsername = req.params.username;
+        const user = await User.findOne({ username: requestedUsername });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if it's the user's own profile
+        if (user._id.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to update this profile' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        // Create the photo URL
+        const photoUrl = `/uploads/${req.file.filename}`;
+        user.profilePhoto = photoUrl;
+        await user.save();
+
+        res.json({
+            profilePhoto: user.profilePhoto
+        });
+    } catch (error) {
+        console.error('Photo upload error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 const getProfile = async (req, res) => {
     try {
         const requestedUsername = req.params.username;
@@ -97,50 +133,84 @@ const getProfile = async (req, res) => {
         }
 
         const isOwnProfile = req.user._id.toString() === user._id.toString();
-
-        // Convert minutes to hours for milestone calculations
-        const hoursStudied = user.totalTimeStudied / 60; // This gives us the exact hours (can be decimal)
+        const hoursStudied = user.totalTimeStudied / 60;
+        
+        // Initialize these variables that were missing
         let currentMilestone = 0;
         let progress = 0;
         let nextMilestone = 5;
 
-        // Update milestone thresholds (in hours)
+        // Calculate milestones
         if (hoursStudied >= 50) {
             currentMilestone = 50;
             progress = 100;
             nextMilestone = null;
         } else if (hoursStudied >= 20) {
             currentMilestone = 20;
-            progress = ((hoursStudied - 20) / (50 - 20)) * 100; // Progress between 20 and 50 hours
+            progress = ((hoursStudied - 20) / 30) * 100;
             nextMilestone = 50;
         } else if (hoursStudied >= 10) {
             currentMilestone = 10;
-            progress = ((hoursStudied - 10) / (20 - 10)) * 100; // Progress between 10 and 20 hours
+            progress = ((hoursStudied - 10) / 10) * 100;
             nextMilestone = 20;
         } else if (hoursStudied >= 5) {
             currentMilestone = 5;
-            progress = ((hoursStudied - 5) / (10 - 5)) * 100; // Progress between 5 and 10 hours
+            progress = ((hoursStudied - 5) / 5) * 100;
             nextMilestone = 10;
         } else {
-            // Progress from 0 to 5 hours
-            progress = (hoursStudied / 5) * 100; // This will now show the correct progress for early sessions
+            progress = (hoursStudied / 5) * 100;
             nextMilestone = 5;
         }
 
         res.json({
             username: user.username,
+            profilePhoto: user.profilePhoto,
+            bio: user.bio,
             sessionsCompleted: user.sessionsCompleted,
-            totalTimeStudied: user.totalTimeStudied, // This remains in minutes
+            totalTimeStudied: user.totalTimeStudied,
             currentMilestone,
-            progress: Math.min(100, Math.max(0, Math.round(progress * 100) / 100)), // Rounds to 2 decimal places
+            progress: Math.min(100, Math.max(0, Math.round(progress * 100) / 100)),
             nextMilestone,
-            isOwnProfile
+            isOwnProfile,
+            createdAt: user.createdAt
+        });
+    } catch (error) {
+        console.error('Profile fetch error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Update user bio
+// @route   PUT /profile/bio
+// @access  Private
+const updateBio = async (req, res) => {
+    try {
+        const { bio } = req.body;
+        
+        if (!bio && bio !== '') {
+            return res.status(400).json({ message: 'Bio content is required' });
+        }
+
+        if (bio.length > 500) {
+            return res.status(400).json({ message: 'Bio cannot exceed 500 characters' });
+        }
+
+        const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.bio = bio;
+        await user.save();
+
+        res.json({
+            bio: user.bio
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
-
 
 // Add this to track completed sessions
 const updateSessionStats = async (req, res) => {
@@ -166,4 +236,4 @@ const updateSessionStats = async (req, res) => {
 
 
 
-export { registerUser, loginUser, getDashboard,  getProfile, updateSessionStats  };
+export { registerUser, loginUser, getDashboard,  getProfile, updateSessionStats, updateProfilePhoto, updateBio};

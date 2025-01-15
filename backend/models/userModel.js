@@ -1,4 +1,3 @@
-// models/userModel.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -17,6 +16,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    profilePhoto: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        default: '',
+        maxLength: 500
+    },
     sessionsCompleted: {
         type: Number,
         default: 0
@@ -26,7 +34,7 @@ const userSchema = new mongoose.Schema({
         default: 0
     }
 }, {
-    timestamps: true
+    timestamps: true  // This adds createdAt and updatedAt fields automatically
 });
 
 // Hash password before saving
