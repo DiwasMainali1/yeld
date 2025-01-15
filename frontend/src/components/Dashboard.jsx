@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw } from 'lucide-react';
 import Header from './Header';
 import MusicPlayer from './MusicPlayer';
 import QuoteSection from './QuoteSection';
+import Alarm from '../music/notification.mp3'
 
 function Dashboard() {
     const [username, setUsername] = useState('');
@@ -12,7 +13,8 @@ function Dashboard() {
     const [timerType, setTimerType] = useState('pomodoro');
     const [totalTimeStudied, setTotalTimeStudied] = useState(0);
     const [completedSessions, setCompletedSessions] = useState(0);
-    const [audio] = useState(new Audio('/notification.mp3'));
+    const [currentCycleCount, setCurrentCycleCount] = useState(0);
+    const [audio] = useState(new Audio(Alarm));
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -102,12 +104,29 @@ function Dashboard() {
             setIsActive(false);
             setSessionStarted(false);
             audio.play().catch(error => console.error('Error playing alarm:', error));
+            
             if (timerType === 'pomodoro') {
                 updateUserStats();
+                const newCycleCount = currentCycleCount + 1;
+                setCurrentCycleCount(newCycleCount);
+                
+                // After third Pomodoro, switch to long break
+                if (newCycleCount % 3 === 0) {
+                    setTimerType('longBreak');
+                    setTime(50 * 60);
+                } else {
+                    // Otherwise switch to short break
+                    setTimerType('shortBreak');
+                    setTime(5 * 60);
+                }
+            } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
+                // After any break, switch back to Pomodoro
+                setTimerType('pomodoro');
+                setTime(25 * 60);
             }
         }
         return () => clearInterval(interval);
-    }, [isActive, time, timerType, audio]);
+    }, [isActive, time, timerType, audio, currentCycleCount]);
 
     const toggleTimer = () => {
         if (!isActive && !sessionStarted) {
@@ -119,6 +138,7 @@ function Dashboard() {
     const resetTimer = () => {
         setIsActive(false);
         setSessionStarted(false);
+        setCurrentCycleCount(0); // Reset cycle count when manually resetting timer
         switch(timerType) {
             case 'pomodoro':
                 setTime(25 * 60);
@@ -140,6 +160,7 @@ function Dashboard() {
             if (!confirmed) return;
         }
         setTimerType(type);
+        setCurrentCycleCount(0); // Reset cycle count when manually changing timer type
         switch(type) {
             case 'pomodoro':
                 setTime(25 * 60);
