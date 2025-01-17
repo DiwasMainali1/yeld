@@ -177,7 +177,7 @@ const Profile = () => {
         return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
     }
 
-    const totalHours = Math.floor(profileData?.totalTimeStudied / 60);
+    const totalHours = profileData?.totalTimeStudied / 60;
     const currentTitle = getCurrentTitle(totalHours);
     const nextTitle = Object.values(titles).find(title => title.hours > totalHours);
     const createdAt = new Date(profileData?.createdAt).toLocaleDateString('en-US', {
