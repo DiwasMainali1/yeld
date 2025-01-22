@@ -13,9 +13,8 @@ import {
     updateProfilePhoto,
     updateBio 
 } from './controllers/userController.js';
-import upload from './middleware/upload.js';
+import { upload, deletePreviousFile } from './middleware/upload.js'; // Import deletePreviousFile
 import multer from 'multer';
-
 
 dotenv.config();
 
@@ -48,7 +47,7 @@ app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
 
 // Profile update routes
-app.put('/profile/:username/photo', protect, upload.single('photo'), updateProfilePhoto);
+app.put('/profile/:username/photo', protect, deletePreviousFile, upload.single('photo'), updateProfilePhoto); // Add deletePreviousFile middleware
 app.put('/profile/bio', protect, updateBio);
 
 // Home route

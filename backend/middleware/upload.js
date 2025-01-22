@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,4 +52,34 @@ const upload = multer({
     fileFilter: fileFilter
 });
 
-export default upload;
+// Middleware to delete previous file
+const deletePreviousFile = (req, res, next) => {
+    const username = req.params.username;
+    if (!username) {
+        return next(new Error('Username is required for file upload'));
+    }
+
+    const uploadDir = path.join(__dirname, '../uploads/');
+    const cleanUsername = username.replace(/[^a-zA-Z0-9]/g, ''); // Remove special characters
+
+    // Find and delete the previous file
+    fs.readdir(uploadDir, (err, files) => {
+        if (err) {
+            return next(err);
+        }
+
+        const previousFile = files.find(file => file.startsWith(cleanUsername));
+        if (previousFile) {
+            fs.unlink(path.join(uploadDir, previousFile), (err) => {
+                if (err) {
+                    return next(err);
+                }
+                next();
+            });
+        } else {
+            next();
+        }
+    });
+};
+
+export { upload, deletePreviousFile };
