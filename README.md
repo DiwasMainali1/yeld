@@ -2,9 +2,9 @@
 
 ![Yeld Logo](./README_images/yeld.png)
 
-![Yeld Interface](./yeld_1.png)
-![Yeld Timer](./yeld_2.png)
-![Yeld Profile](./yeld_3.png)
+![Yeld Interface](./README_images/yeld_1.png)
+![Yeld Timer](./README_images/yeld_2.png)
+![Yeld Profile](./README_images/yeld_3.png)
 
 Yeld is a minimalist productivity tool designed specifically for students who want to maximize their study efficiency. With its clean, distraction-free interface and customizable Pomodoro timer, Yeld helps you maintain focus during study sessions.
 
