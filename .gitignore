@@ -60,3 +60,13 @@ temp/
 # Package managers
 yarn.lock
 package-lock.json
+
+# Project specific
+/frontend/build/
+/frontend/dist/
+/backend/build/
+/backend/dist/
+/README_images/
+
+# Desktop files
+desktop.ini
