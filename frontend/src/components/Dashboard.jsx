@@ -4,8 +4,10 @@ import Header from './Header';
 import MusicPlayer from './MusicPlayer';
 import QuoteSection from './QuoteSection';
 import Alarm from '../music/notification.mp3'
+import TaskList from './Tasklist';
 
 function Dashboard() {
+    const [tasks, setTasks] = useState([]);
     const [username, setUsername] = useState('');
     const [time, setTime] = useState(25 * 60);
     const [isActive, setIsActive] = useState(false);
@@ -38,6 +40,22 @@ function Dashboard() {
         };
         fetchUser();
     }, []);
+
+    const addTask = (text) => {
+        setTasks([...tasks, { id: Date.now(), text, completed: false }]);
+    };
+
+    const deleteTask = (taskId) => {
+        setTasks(tasks.filter((task) => task.id !== taskId));
+    };
+
+    const toggleTask = (taskId) => {
+        setTasks(
+          tasks.map((task) =>
+            task.id === taskId ? { ...task, completed: !task.completed } : task
+          )
+        );
+    };
 
     const fetchUserStats = async (currentUsername) => {
         try {
@@ -187,8 +205,16 @@ function Dashboard() {
     return (
         <div className="min-h-screen bg-black font-sans select-none">
             <Header username={username} isTimerActive={sessionStarted} />
-            <div className="max-w-7xl mx-auto px-8 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="max-w-[1500px] mx-auto px-8 py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-1">
+                        <TaskList
+                        tasks={tasks}
+                        onAddTask={addTask}
+                        onDeleteTask={deleteTask}
+                        onToggleTask={toggleTask}
+                        />
+                    </div>
                     <div className="lg:col-span-2">
                         <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
                             <div className="flex justify-center mb-12">
