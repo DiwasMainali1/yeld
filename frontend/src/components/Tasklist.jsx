@@ -29,7 +29,11 @@ const TaskList = () => {
       }
 
       const data = await response.json();
-      setTasks(data);
+      // Sort tasks by creation date, assuming each task has a createdAt field
+      const sortedTasks = data.sort((a, b) => 
+        new Date(a.createdAt) - new Date(b.createdAt)
+      );
+      setTasks(sortedTasks);
       setError('');
     } catch (error) {
       setError('Error loading tasks');
@@ -59,6 +63,7 @@ const TaskList = () => {
       }
 
       const newTask = await response.json();
+      // Add new task at the end since it's the newest
       setTasks(prevTasks => [...prevTasks, newTask]);
       setNewTaskText('');
       setError('');
@@ -68,8 +73,7 @@ const TaskList = () => {
     }
   };
 
-// In TaskList.js - Update handleDelete function
-const handleDelete = async (taskId) => {
+  const handleDelete = async (taskId) => {
     try {
       const token = localStorage.getItem('userToken');
       const task = tasks.find(t => t._id === taskId);
@@ -101,9 +105,9 @@ const handleDelete = async (taskId) => {
       setError('Error deleting task');
       console.error('Error:', error);
     }
-};
+  };
   
-const handleToggle = async (taskId) => {
+  const handleToggle = async (taskId) => {
     try {
       const token = localStorage.getItem('userToken');
       const task = tasks.find(t => t._id === taskId);
