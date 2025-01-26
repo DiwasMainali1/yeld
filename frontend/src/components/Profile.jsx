@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, Trophy, Timer, User, Camera, ChevronRight, Calendar, Edit2, Check, X } from 'lucide-react';
 import Header from './Header';
+import TaskHistoryModal from './TaskHistoryModal';
 
 const Profile = () => {
+    const [showTaskHistory, setShowTaskHistory] = useState(false);
     const { username } = useParams();
     const navigate = useNavigate();
     const [profileData, setProfileData] = useState(null);
@@ -233,9 +235,16 @@ const Profile = () => {
                                 <h1 className={`text-3xl font-bold ${currentTitle.gradient || currentTitle.color}`}>
                                     {profileData?.username}
                                 </h1>
+
                                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${currentTitle.background} ${currentTitle.color} ${currentTitle.border} border`}>
                                     {currentTitle.name}
                                 </div>
+                                <button
+                                    onClick={() => setShowTaskHistory(true)}
+                                    className="px-4 py-2 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 transition-colors"
+                                    >
+                                    Task History
+                                </button>
                             </div>
                             
                             <div className="flex items-center gap-2 text-sm text-zinc-400 mb-4">
@@ -388,6 +397,11 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
+            <TaskHistoryModal 
+                isOpen={showTaskHistory}
+                onClose={() => setShowTaskHistory(false)}
+                tasks={profileData?.completedTasks}
+            />
         </div>
     );
 };

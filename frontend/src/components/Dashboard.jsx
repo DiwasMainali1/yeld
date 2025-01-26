@@ -49,13 +49,30 @@ function Dashboard() {
         setTasks(tasks.filter((task) => task.id !== taskId));
     };
 
-    const toggleTask = (taskId) => {
-        setTasks(
-          tasks.map((task) =>
-            task.id === taskId ? { ...task, completed: !task.completed } : task
-          )
-        );
-    };
+    const toggleTask = async (taskId) => {
+        try {
+          const task = tasks.find(t => t.id === taskId);
+          const newCompleted = !task.completed;
+          
+          if (newCompleted) {
+            const token = localStorage.getItem('userToken');
+            await fetch('http://localhost:5000/tasks/complete', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ text: task.text })
+            });
+          }
+      
+          setTasks(tasks.map(t => 
+            t.id === taskId ? { ...t, completed: newCompleted } : t
+          ));
+        } catch (error) {
+          console.error('Error updating task:', error);
+        }
+      };
 
     const fetchUserStats = async (currentUsername) => {
         try {

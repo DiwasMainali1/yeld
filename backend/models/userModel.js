@@ -32,7 +32,12 @@ const userSchema = new mongoose.Schema({
     totalTimeStudied: {
         type: Number, 
         default: 0
-    }
+    },
+    taskHistory: [{
+        text: String,
+        completedAt: Date,
+        wasCompleted: Boolean
+    }]
 }, {
     timestamps: true  // This adds createdAt and updatedAt fields automatically
 });
