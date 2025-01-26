@@ -35,8 +35,9 @@ const userSchema = new mongoose.Schema({
     },
     taskHistory: [{
         text: String,
-        completedAt: Date,
-        wasCompleted: Boolean
+        completedAt: { type: Date, default: Date.now },
+        wasCompleted: { type: Boolean, default: false },
+        wasDeleted: { type: Boolean, default: false }
     }]
 }, {
     timestamps: true  // This adds createdAt and updatedAt fields automatically

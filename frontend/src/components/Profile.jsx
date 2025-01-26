@@ -239,11 +239,14 @@ const Profile = () => {
                                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${currentTitle.background} ${currentTitle.color} ${currentTitle.border} border`}>
                                     {currentTitle.name}
                                 </div>
+                                
+                                <div className="flex-1"></div>
+                                
                                 <button
                                     onClick={() => setShowTaskHistory(true)}
-                                    className="px-4 py-2 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 transition-colors"
-                                    >
-                                    Task History
+                                    className="bg-zinc-900 hover:bg-zinc-800 text-white px-6 py-2 rounded-xl border border-zinc-800 transition-all duration-300 flex items-center gap-2 hover:border-zinc-700 shadow-lg hover:shadow-zinc-900/25"
+                                >
+                                    <span>Task History</span>
                                 </button>
                             </div>
                             
@@ -400,7 +403,7 @@ const Profile = () => {
             <TaskHistoryModal 
                 isOpen={showTaskHistory}
                 onClose={() => setShowTaskHistory(false)}
-                tasks={profileData?.completedTasks}
+                tasks={profileData?.taskHistory}
             />
         </div>
     );

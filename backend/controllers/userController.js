@@ -137,58 +137,23 @@ const updateProfilePhoto = async (req, res) => {
 
 const getProfile = async (req, res) => {
     try {
-        const requestedUsername = req.params.username;
-        const user = await User.findOne({ username: requestedUsername }).select('-password');
-        
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        const user = await User.findOne({ username: req.params.username });
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const isOwnProfile = req.user._id.toString() === user._id.toString();
-        const hoursStudied = user.totalTimeStudied / 60;
-        
-        // Initialize these variables that were missing
-        let currentMilestone = 0;
-        let progress = 0;
-        let nextMilestone = 5;
-
-        // Calculate milestones
-        if (hoursStudied >= 50) {
-            currentMilestone = 50;
-            progress = 100;
-            nextMilestone = null;
-        } else if (hoursStudied >= 20) {
-            currentMilestone = 20;
-            progress = ((hoursStudied - 20) / 30) * 100;
-            nextMilestone = 50;
-        } else if (hoursStudied >= 10) {
-            currentMilestone = 10;
-            progress = ((hoursStudied - 10) / 10) * 100;
-            nextMilestone = 20;
-        } else if (hoursStudied >= 5) {
-            currentMilestone = 5;
-            progress = ((hoursStudied - 5) / 5) * 100;
-            nextMilestone = 10;
-        } else {
-            progress = (hoursStudied / 5) * 100;
-            nextMilestone = 5;
-        }
-
-        res.json({
+        const profile = {
             username: user.username,
             profilePhoto: user.profilePhoto,
             bio: user.bio,
             sessionsCompleted: user.sessionsCompleted,
             totalTimeStudied: user.totalTimeStudied,
-            currentMilestone,
-            progress: Math.min(100, Math.max(0, Math.round(progress * 100) / 100)),
-            nextMilestone,
-            isOwnProfile,
-            createdAt: user.createdAt
-        });
+            taskHistory: user.taskHistory.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)),
+            createdAt: user.createdAt,
+            isOwnProfile: req.user._id.equals(user._id)
+        };
+
+        res.json(profile);
     } catch (error) {
-        console.error('Profile fetch error:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 

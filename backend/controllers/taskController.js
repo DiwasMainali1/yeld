@@ -57,3 +57,17 @@ export const toggleTask = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const completeTask = async (req, res) => {
+    try {
+        const { text, completedAt, wasCompleted } = req.body;
+        const user = await User.findById(req.user._id);
+        
+        user.taskHistory.push({ text, completedAt, wasCompleted });
+        await user.save();
+        
+        res.status(200).json({ message: 'Task history updated' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};

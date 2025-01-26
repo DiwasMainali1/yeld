@@ -42,37 +42,64 @@ function Dashboard() {
     }, []);
 
     const addTask = (text) => {
-        setTasks([...tasks, { id: Date.now(), text, completed: false }]);
+        setTasks([{ id: Date.now(), text, completed: false }, ...tasks]);
     };
 
-    const deleteTask = (taskId) => {
-        setTasks(tasks.filter((task) => task.id !== taskId));
+    const deleteTask = async (taskId) => {
+        try {
+            const task = tasks.find(t => t.id === taskId);
+            if (task.completed) {
+                const token = localStorage.getItem('userToken');
+                const response = await fetch('http://localhost:5000/tasks/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        text: task.text,
+                        completedAt: new Date(),
+                        wasCompleted: true,
+                        wasDeleted: true
+                    })
+                });
+                const data = await response.json();
+                console.log('Task history response:', data);
+            }
+            setTasks(tasks.filter((t) => t.id !== taskId));
+        } catch (error) {
+            console.error('Error deleting task:', error);
+        }
     };
 
     const toggleTask = async (taskId) => {
         try {
-          const task = tasks.find(t => t.id === taskId);
-          const newCompleted = !task.completed;
-          
-          if (newCompleted) {
-            const token = localStorage.getItem('userToken');
-            await fetch('http://localhost:5000/tasks/complete', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ text: task.text })
-            });
-          }
-      
-          setTasks(tasks.map(t => 
-            t.id === taskId ? { ...t, completed: newCompleted } : t
-          ));
+            const task = tasks.find(t => t.id === taskId);
+            const newCompleted = !task.completed;
+            
+            if (newCompleted) {
+                const token = localStorage.getItem('userToken');
+                await fetch('http://localhost:5000/tasks/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        text: task.text,
+                        completedAt: new Date(),
+                        wasCompleted: true
+                    })
+                });
+            }
+        
+            setTasks(tasks.map(t => 
+                t.id === taskId ? { ...t, completed: newCompleted } : t
+            ));
         } catch (error) {
-          console.error('Error updating task:', error);
+            console.error('Error updating task:', error);
         }
-      };
+    };
 
     const fetchUserStats = async (currentUsername) => {
         try {

@@ -1,8 +1,17 @@
-import { X, Clock } from 'lucide-react';
-
+import React from 'react';
+import { X } from 'lucide-react';
 
 const TaskHistoryModal = ({ isOpen, onClose, tasks = [] }) => {
     if (!isOpen) return null;
+
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -23,22 +32,13 @@ const TaskHistoryModal = ({ isOpen, onClose, tasks = [] }) => {
                             {tasks.map((task, index) => (
                                 <div 
                                     key={index} 
-                                    className="bg-zinc-900 rounded-xl p-4 border border-zinc-800"
+                                    className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 hover:border-zinc-700 transition-colors"
                                 >
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h3 className="text-white font-medium">{task.title}</h3>
-                                            <p className="text-zinc-400 text-sm mt-1">{task.description}</p>
-                                        </div>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-gray-200 font-medium">{task.text}</h3>
                                         <span className="text-zinc-500 text-sm">
-                                            {new Date(task.completedAt).toLocaleDateString()}
+                                            {formatDate(task.completedAt)}
                                         </span>
-                                    </div>
-                                    <div className="flex items-center gap-3 mt-3 text-sm">
-                                        <div className="flex items-center gap-1 text-zinc-400">
-                                            <Clock className="w-4 h-4" />
-                                            <span>{task.duration} mins</span>
-                                        </div>
                                     </div>
                                 </div>
                             ))}

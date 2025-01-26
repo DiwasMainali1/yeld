@@ -68,52 +68,61 @@ const TaskList = () => {
     }
   };
 
-  const handleDelete = async (taskId) => {
+// In TaskList.js - Update handleDelete function
+const handleDelete = async (taskId) => {
     try {
       const token = localStorage.getItem('userToken');
+      const task = tasks.find(t => t._id === taskId);
+  
+      if (task.completed) {
+        await fetch('http://localhost:5000/tasks/history', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: task.text,
+            completedAt: new Date()
+          })
+        });
+      }
+  
       const response = await fetch(`http://localhost:5000/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete task');
-      }
-
-      setTasks(prevTasks => prevTasks.filter(task => task._id !== taskId));
-      setError('');
+  
+      if (!response.ok) throw new Error('Failed to delete task');
+      setTasks(prevTasks => prevTasks.filter(t => t._id !== taskId));
     } catch (error) {
       setError('Error deleting task');
-      console.error('Error deleting task:', error);
+      console.error('Error:', error);
     }
-  };
-
-  const handleToggle = async (taskId) => {
+};
+  
+const handleToggle = async (taskId) => {
     try {
       const token = localStorage.getItem('userToken');
+      const task = tasks.find(t => t._id === taskId);
+      const newCompleted = !task.completed;
+  
       const response = await fetch(`http://localhost:5000/tasks/${taskId}/toggle`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to toggle task');
-      }
-
-      const updatedTask = await response.json();
-      setTasks(prevTasks => 
-        prevTasks.map(task => 
-          task._id === taskId ? { ...task, completed: updatedTask.completed } : task
-        )
-      );
-      setError('');
+  
+      if (!response.ok) throw new Error('Failed to toggle task');
+      setTasks(prevTasks => prevTasks.map(t => 
+        t._id === taskId ? { ...t, completed: newCompleted } : t
+      ));
     } catch (error) {
       setError('Error updating task');
-      console.error('Error toggling task:', error);
+      console.error('Error:', error);
     }
   };
 
