@@ -208,12 +208,7 @@ function Dashboard() {
             <div className="max-w-[1500px] mx-auto px-8 py-12">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-1">
-                        <TaskList
-                        tasks={tasks}
-                        onAddTask={addTask}
-                        onDeleteTask={deleteTask}
-                        onToggleTask={toggleTask}
-                        />
+                        <TaskList />
                     </div>
                     <div className="lg:col-span-2">
                         <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">

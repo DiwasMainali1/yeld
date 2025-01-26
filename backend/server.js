@@ -3,8 +3,11 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mkdirSync } from 'fs';
+import multer from 'multer';
 import { connectDB } from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
+import taskRoutes from './routes/taskRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
 import { 
     getDashboard, 
@@ -13,8 +16,7 @@ import {
     updateProfilePhoto,
     updateBio 
 } from './controllers/userController.js';
-import { upload, deletePreviousFile } from './middleware/upload.js'; // Import deletePreviousFile
-import multer from 'multer';
+import { upload, deletePreviousFile } from './middleware/upload.js';
 
 dotenv.config();
 
@@ -22,40 +24,43 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors());
 
-// Middleware
+// CORS configuration
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Create uploads directory if it doesn't exist
-import { mkdirSync } from 'fs';
+// Create and serve uploads directory
 try {
     mkdirSync(path.join(__dirname, 'uploads'));
 } catch (err) {
     if (err.code !== 'EEXIST') throw err;
 }
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Auth routes
+// Routes
 app.use('/auth', userRoutes);
+app.use('/tasks', taskRoutes);
 
 // Protected routes
 app.get('/dashboard', protect, getDashboard);
 app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
-
-// Profile update routes
-app.put('/profile/:username/photo', protect, deletePreviousFile, upload.single('photo'), updateProfilePhoto); // Add deletePreviousFile middleware
+app.put('/profile/:username/photo', protect, deletePreviousFile, upload.single('photo'), updateProfilePhoto);
 app.put('/profile/bio', protect, updateBio);
 
-// Home route
+// Health check route
 app.get("/", (req, res) => {
-    res.send("Server is ready");
+    res.json({ status: "Server is running" });
 });
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     if (err instanceof multer.MulterError) {
@@ -67,7 +72,9 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Server error occurred' });
 });
 
-app.listen(5000, () => {
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
     connectDB();
-    console.log("Server started at http://localhost:5000");
+    console.log(`Server running on http://localhost:${PORT}`);
 });
