@@ -211,6 +211,92 @@ const updateSessionStats = async (req, res) => {
     }
 };
 
+// @desc    Update user profile
+// @route   PUT /profile/update
+// @access  Private
+const updateProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
+        const { username, email, bio, currentPassword, newPassword } = req.body;
 
-export { registerUser, loginUser, getDashboard,  getProfile, updateSessionStats, updateProfilePhoto, updateBio};
+        // Check if username is being changed
+        if (username && username !== user.username) {
+            // Check if user has exceeded username changes limit
+            if (user.usernameChanges >= 2) {
+                return res.status(400).json({ 
+                    message: 'Username can only be changed twice'
+                });
+            }
+
+            // Check if username is available
+            const usernameExists = await User.findOne({ username });
+            if (usernameExists) {
+                return res.status(400).json({ 
+                    message: 'Username is already taken'
+                });
+            }
+
+            user.username = username;
+            user.usernameChanges += 1;
+        }
+
+        // Check if email is being changed
+        if (email && email !== user.email) {
+            const emailExists = await User.findOne({ email });
+            if (emailExists) {
+                return res.status(400).json({ 
+                    message: 'Email is already in use'
+                });
+            }
+            user.email = email;
+        }
+
+        // Update bio if provided
+        if (bio !== undefined) {
+            if (bio.length > 500) {
+                return res.status(400).json({ 
+                    message: 'Bio cannot exceed 500 characters'
+                });
+            }
+            user.bio = bio;
+        }
+
+        // Handle password change if provided
+        if (currentPassword && newPassword) {
+            const isMatch = await user.matchPassword(currentPassword);
+            if (!isMatch) {
+                return res.status(400).json({ 
+                    message: 'Current password is incorrect'
+                });
+            }
+
+            if (newPassword.length < 6) {
+                return res.status(400).json({ 
+                    message: 'New password must be at least 6 characters long'
+                });
+            }
+
+            user.password = newPassword;
+        }
+
+        await user.save();
+
+        // Send response without sensitive information
+        res.json({
+            username: user.username,
+            email: user.email,
+            bio: user.bio,
+            profilePhoto: user.profilePhoto,
+            usernameChanges: user.usernameChanges
+        });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+export { registerUser, loginUser, getDashboard,  getProfile, updateSessionStats, updateProfilePhoto, updateBio, updateProfile};

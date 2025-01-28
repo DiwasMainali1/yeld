@@ -14,7 +14,7 @@ import {
     getProfile, 
     updateSessionStats, 
     updateProfilePhoto,
-    updateBio 
+    updateProfile 
 } from './controllers/userController.js';
 import { upload, deletePreviousFile } from './middleware/upload.js';
 
@@ -31,8 +31,9 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-  }));
+}));
 
+// Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -44,6 +45,11 @@ try {
 }
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Health check route
+app.get("/", (req, res) => {
+    res.json({ status: "Server is running" });
+});
+
 // Routes
 app.use('/auth', userRoutes);
 app.use('/tasks', taskRoutes);
@@ -52,28 +58,51 @@ app.use('/tasks', taskRoutes);
 app.get('/dashboard', protect, getDashboard);
 app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
+
+// Profile update routes
+app.put('/profile/update', protect, updateProfile);
 app.put('/profile/:username/photo', protect, deletePreviousFile, upload.single('photo'), updateProfilePhoto);
-app.put('/profile/bio', protect, updateBio);
 
-// Health check route
-app.get("/", (req, res) => {
-    res.json({ status: "Server is running" });
-});
-
-// Error handling
+// Global error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
+    
+    // Handle Multer errors
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ message: 'File is too large. Maximum size is 5MB' });
+            return res.status(400).json({ 
+                message: 'File is too large. Maximum size is 5MB' 
+            });
         }
-        return res.status(400).json({ message: err.message });
+        return res.status(400).json({ 
+            message: err.message 
+        });
     }
-    res.status(500).json({ message: 'Server error occurred' });
+
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+        return res.status(400).json({ 
+            message: err.message 
+        });
+    }
+
+    // Handle other errors
+    res.status(500).json({ 
+        message: 'Server error occurred',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
+// Handle 404 errors for undefined routes
+app.use((req, res) => {
+    res.status(404).json({ 
+        message: 'Route not found' 
+    });
 });
 
 const PORT = process.env.PORT || 5000;
 
+// Connect to database and start server
 app.listen(PORT, () => {
     connectDB();
     console.log(`Server running on http://localhost:${PORT}`);

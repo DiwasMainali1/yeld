@@ -33,6 +33,10 @@ const userSchema = new mongoose.Schema({
         type: Number, 
         default: 0
     },
+    usernameChanges: {
+        type: Number,
+        default: 0
+    },
     taskHistory: [{
         text: String,
         completedAt: { type: Date, default: Date.now },
@@ -40,10 +44,9 @@ const userSchema = new mongoose.Schema({
         wasDeleted: { type: Boolean, default: false }
     }]
 }, {
-    timestamps: true  // This adds createdAt and updatedAt fields automatically
+    timestamps: true
 });
 
-// Hash password before saving
 userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) {
         next();
@@ -52,7 +55,6 @@ userSchema.pre('save', async function(next) {
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Method to compare password for login
 userSchema.methods.matchPassword = async function(enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };

@@ -1,8 +1,10 @@
-import { useNavigate } from 'react-router-dom';
-import { User, LogOut } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { User, LogOut, Settings } from 'lucide-react';
 
-function Header({ username, isTimerActive }) {
+function Header({ username, isTimerActive, isOwnProfile, onEditProfile }) {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isProfilePage = location.pathname.startsWith('/profile/');
 
     const handleLogout = () => {
         if (isTimerActive) {
@@ -43,7 +45,17 @@ function Header({ username, isTimerActive }) {
                     <span className="text-gray-200 font-medium">Welcome back, {username}</span>
                 </div>
             </div>
-            <div className='flex flex-row space-x-10'>
+            <div className='flex flex-row gap-4'>
+                {isProfilePage && isOwnProfile && (
+                    <button
+                        className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                        onClick={onEditProfile}
+                    >
+                        <Settings size={20} />
+                        Edit Profile
+                    </button>
+                )}
+
                 <button
                     className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                     onClick={handleProfile}
