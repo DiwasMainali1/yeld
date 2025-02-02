@@ -7,7 +7,6 @@ import {
     getProfile, 
     updateSessionStats, 
     updateProfilePhoto, 
-    updateBio,
     updateProfile 
 } from '../controllers/userController.js';
 import { upload, deletePreviousFile } from '../middleware/upload.js';
