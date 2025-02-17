@@ -9,7 +9,7 @@ import TaskList from './Tasklist';
 function Dashboard() {
     const [tasks, setTasks] = useState([]);
     const [username, setUsername] = useState('');
-    const [time, setTime] = useState(25 * 60);
+    const [time, setTime] = useState(120 * 60); 
     const [isActive, setIsActive] = useState(false);
     const [sessionStarted, setSessionStarted] = useState(false);
     const [timerType, setTimerType] = useState('pomodoro');
@@ -177,14 +177,14 @@ function Dashboard() {
                     setTimerType('longBreak');
                     setTime(50 * 60);
                 } else {
-                    // Otherwise switch to short break
+                    
                     setTimerType('shortBreak');
-                    setTime(5 * 60);
+                    setTime(15 * 60); 
                 }
             } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
                 // After any break, switch back to Pomodoro
                 setTimerType('pomodoro');
-                setTime(25 * 60);
+                setTime(120 * 60);
             }
         }
         return () => clearInterval(interval);
@@ -200,19 +200,19 @@ function Dashboard() {
     const resetTimer = () => {
         setIsActive(false);
         setSessionStarted(false);
-        setCurrentCycleCount(0); // Reset cycle count when manually resetting timer
+        setCurrentCycleCount(0); 
         switch(timerType) {
             case 'pomodoro':
-                setTime(25 * 60);
+                setTime(120 * 60); 
                 break;
             case 'shortBreak':
-                setTime(5 * 60);
+                setTime(15 * 60);
                 break;
             case 'longBreak':
                 setTime(50 * 60);
                 break;
             default:
-                setTime(25 * 60);
+                setTime(120 * 60); 
         }
     };
 
@@ -222,19 +222,19 @@ function Dashboard() {
             if (!confirmed) return;
         }
         setTimerType(type);
-        setCurrentCycleCount(0); // Reset cycle count when manually changing timer type
+        setCurrentCycleCount(0); 
         switch(type) {
             case 'pomodoro':
-                setTime(25 * 60);
+                setTime(120 * 60); 
                 break;
             case 'shortBreak':
-                setTime(5 * 60);
+                setTime(15 * 60); 
                 break;
             case 'longBreak':
                 setTime(50 * 60);
                 break;
             default:
-                setTime(25 * 60);
+                setTime(120 * 60); 
         }
         setSessionStarted(false);
         setIsActive(false);
