@@ -1,327 +1,433 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock } from 'lucide-react';
 import Header from './Header';
 import MusicPlayer from './MusicPlayer';
 import QuoteSection from './QuoteSection';
-import Alarm from '../music/notification.mp3'
+import Alarm from '../music/notification.mp3';
 import TaskList from './Tasklist';
 
 function Dashboard() {
-    const [tasks, setTasks] = useState([]);
-    const [username, setUsername] = useState('');
-    const [time, setTime] = useState(120 * 60); 
-    const [isActive, setIsActive] = useState(false);
-    const [sessionStarted, setSessionStarted] = useState(false);
-    const [timerType, setTimerType] = useState('pomodoro');
-    const [totalTimeStudied, setTotalTimeStudied] = useState(0);
-    const [completedSessions, setCompletedSessions] = useState(0);
-    const [currentCycleCount, setCurrentCycleCount] = useState(0);
-    const [audio] = useState(new Audio(Alarm));
+  // Timer duration states (in seconds)
+  const [pomodoroDuration, setPomodoroDuration] = useState(50 * 60); // default 50 minutes
+  const [shortBreakDuration, setShortBreakDuration] = useState(10 * 60); // default 10 minutes
+  const [longBreakDuration, setLongBreakDuration] = useState(60 * 60); // default 60 minutes
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const token = localStorage.getItem('userToken');
-                const response = await fetch('http://localhost:5000/dashboard', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error('Failed to fetch user data');
-                }
-                const data = await response.json();
-                setUsername(data.username);
-                localStorage.setItem('username', data.username);
-                await fetchUserStats(data.username);
-            } catch (error) {
-                console.error('Error fetching user data:', error);
-            }
-        };
-        fetchUser();
-    }, []);
+  // Timer & session states
+  const [time, setTime] = useState(pomodoroDuration);
+  const [isActive, setIsActive] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [timerType, setTimerType] = useState('pomodoro');
+  const [currentCycleCount, setCurrentCycleCount] = useState(0);
 
-    const addTask = (text) => {
-        setTasks([{ id: Date.now(), text, completed: false }, ...tasks]);
-    };
+  // Other states
+  const [tasks, setTasks] = useState([]);
+  const [username, setUsername] = useState('');
+  const [totalTimeStudied, setTotalTimeStudied] = useState(0);
+  const [completedSessions, setCompletedSessions] = useState(0);
+  const [audio] = useState(new Audio(Alarm));
 
-    const deleteTask = async (taskId) => {
-        try {
-            const task = tasks.find(t => t.id === taskId);
-            if (task.completed) {
-                const token = localStorage.getItem('userToken');
-                const response = await fetch('http://localhost:5000/tasks/complete', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        text: task.text,
-                        completedAt: new Date(),
-                        wasCompleted: true,
-                        wasDeleted: true
-                    })
-                });
-                const data = await response.json();
-                console.log('Task history response:', data);
-            }
-            setTasks(tasks.filter((t) => t.id !== taskId));
-        } catch (error) {
-            console.error('Error deleting task:', error);
+  // Modal control
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Temporary inputs for editing durations (in minutes)
+  const [tempPomodoro, setTempPomodoro] = useState(pomodoroDuration / 60);
+  const [tempShortBreak, setTempShortBreak] = useState(shortBreakDuration / 60);
+  const [tempLongBreak, setTempLongBreak] = useState(longBreakDuration / 60);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('userToken');
+        const response = await fetch('http://localhost:5000/dashboard', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
         }
+        const data = await response.json();
+        setUsername(data.username);
+        localStorage.setItem('username', data.username);
+        await fetchUserStats(data.username);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
     };
+    fetchUser();
+  }, []);
 
-    const toggleTask = async (taskId) => {
-        try {
-            const task = tasks.find(t => t.id === taskId);
-            const newCompleted = !task.completed;
-            
-            if (newCompleted) {
-                const token = localStorage.getItem('userToken');
-                await fetch('http://localhost:5000/tasks/complete', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        text: task.text,
-                        completedAt: new Date(),
-                        wasCompleted: true
-                    })
-                });
-            }
-        
-            setTasks(tasks.map(t => 
-                t.id === taskId ? { ...t, completed: newCompleted } : t
-            ));
-        } catch (error) {
-            console.error('Error updating task:', error);
+  const fetchUserStats = async (currentUsername) => {
+    try {
+      if (!currentUsername) return;
+      const token = localStorage.getItem('userToken');
+      const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch user stats');
+      }
+      const data = await response.json();
+      setTotalTimeStudied(data.totalTimeStudied);
+      setCompletedSessions(data.sessionsCompleted || 0);
+
+      // If the user has saved timer settings, apply them
+      if (data.timerSettings) {
+        setPomodoroDuration(data.timerSettings.pomodoro);
+        setShortBreakDuration(data.timerSettings.shortBreak);
+        setLongBreakDuration(data.timerSettings.longBreak);
+
+        // Also update time if not in session
+        if (!sessionStarted && timerType === 'pomodoro') {
+          setTime(data.timerSettings.pomodoro);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    }
+  };
+
+  const updateUserStats = async () => {
+    try {
+      const token = localStorage.getItem('userToken');
+      const response = await fetch('http://localhost:5000/session/complete', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update user stats');
+      }
+      const data = await response.json();
+      setTotalTimeStudied(data.totalTimeStudied);
+      setCompletedSessions((prev) => prev + 1);
+    } catch (error) {
+      console.error('Error updating session stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (sessionStarted) {
+        event.preventDefault();
+        event.returnValue = '';
+        return '';
+      }
     };
-
-    const fetchUserStats = async (currentUsername) => {
-        try {
-            if (!currentUsername) return;
-            const token = localStorage.getItem('userToken');
-            const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (!response.ok) {
-                throw new Error('Failed to fetch user stats');
-            }
-            const data = await response.json();
-            setTotalTimeStudied(data.totalTimeStudied);
-            setCompletedSessions(data.sessionsCompleted || 0);
-        } catch (error) {
-            console.error('Error fetching user stats:', error);
-        }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
+  }, [sessionStarted]);
 
-    const updateUserStats = async () => {
-        try {
-            const token = localStorage.getItem('userToken');
-            const response = await fetch('http://localhost:5000/session/complete', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (!response.ok) {
-                throw new Error('Failed to update user stats');
-            }
-            const data = await response.json();
-            setTotalTimeStudied(data.totalTimeStudied);
-            setCompletedSessions(prev => prev + 1);
-        } catch (error) {
-            console.error('Error updating session stats:', error);
+  useEffect(() => {
+    let interval = null;
+    if (isActive && time > 0) {
+      interval = setInterval(() => {
+        setTime((prevTime) => prevTime - 1);
+      }, 1000);
+    } else if (time === 0) {
+      setIsActive(false);
+      setSessionStarted(false);
+      audio.play().catch((error) => console.error('Error playing alarm:', error));
+
+      if (timerType === 'pomodoro') {
+        updateUserStats();
+        const newCycleCount = currentCycleCount + 1;
+        setCurrentCycleCount(newCycleCount);
+
+        // After third Pomodoro, switch to long break
+        if (newCycleCount % 3 === 0) {
+          setTimerType('longBreak');
+          setTime(longBreakDuration);
+        } else {
+          setTimerType('shortBreak');
+          setTime(shortBreakDuration);
         }
-    };
+      } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
+        // After any break, switch back to Pomodoro
+        setTimerType('pomodoro');
+        setTime(pomodoroDuration);
+      }
+    }
+    return () => clearInterval(interval);
+  }, [
+    isActive,
+    time,
+    timerType,
+    audio,
+    currentCycleCount,
+    pomodoroDuration,
+    shortBreakDuration,
+    longBreakDuration
+  ]);
 
-    useEffect(() => {
-        const handleBeforeUnload = (event) => {
-            if (sessionStarted) {
-                event.preventDefault();
-                event.returnValue = '';
-                return '';
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [sessionStarted]);
+  const toggleTimer = () => {
+    if (!isActive && !sessionStarted) {
+      setSessionStarted(true);
+    }
+    setIsActive(!isActive);
+  };
 
-    useEffect(() => {
-        let interval = null;
-        if (isActive && time > 0) {
-            interval = setInterval(() => {
-                setTime(time => time - 1);
-            }, 1000);
-        } else if (time === 0) {
-            setIsActive(false);
-            setSessionStarted(false);
-            audio.play().catch(error => console.error('Error playing alarm:', error));
-            
-            if (timerType === 'pomodoro') {
-                updateUserStats();
-                const newCycleCount = currentCycleCount + 1;
-                setCurrentCycleCount(newCycleCount);
-                
-                // After third Pomodoro, switch to long break
-                if (newCycleCount % 3 === 0) {
-                    setTimerType('longBreak');
-                    setTime(50 * 60);
-                } else {
-                    
-                    setTimerType('shortBreak');
-                    setTime(15 * 60); 
-                }
-            } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
-                // After any break, switch back to Pomodoro
-                setTimerType('pomodoro');
-                setTime(120 * 60);
-            }
-        }
-        return () => clearInterval(interval);
-    }, [isActive, time, timerType, audio, currentCycleCount]);
+  const resetTimer = () => {
+    setIsActive(false);
+    setSessionStarted(false);
+    setCurrentCycleCount(0);
+    switch (timerType) {
+      case 'pomodoro':
+        setTime(pomodoroDuration);
+        break;
+      case 'shortBreak':
+        setTime(shortBreakDuration);
+        break;
+      case 'longBreak':
+        setTime(longBreakDuration);
+        break;
+      default:
+        setTime(pomodoroDuration);
+    }
+  };
 
-    const toggleTimer = () => {
-        if (!isActive && !sessionStarted) {
-            setSessionStarted(true);
-        }
-        setIsActive(!isActive);
-    };
+  const handleTimerTypeChange = (type) => {
+    if (sessionStarted) {
+      const confirmed = window.confirm(
+        'Changing timer type will reset your current session. Are you sure?'
+      );
+      if (!confirmed) return;
+    }
+    setTimerType(type);
+    setCurrentCycleCount(0);
+    switch (type) {
+      case 'pomodoro':
+        setTime(pomodoroDuration);
+        break;
+      case 'shortBreak':
+        setTime(shortBreakDuration);
+        break;
+      case 'longBreak':
+        setTime(longBreakDuration);
+        break;
+      default:
+        setTime(pomodoroDuration);
+    }
+    setSessionStarted(false);
+    setIsActive(false);
+  };
 
-    const resetTimer = () => {
-        setIsActive(false);
-        setSessionStarted(false);
-        setCurrentCycleCount(0); 
-        switch(timerType) {
-            case 'pomodoro':
-                setTime(120 * 60); 
-                break;
-            case 'shortBreak':
-                setTime(15 * 60);
-                break;
-            case 'longBreak':
-                setTime(50 * 60);
-                break;
-            default:
-                setTime(120 * 60); 
-        }
-    };
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
-    const handleTimerTypeChange = (type) => {
-        if (sessionStarted) {
-            const confirmed = window.confirm('Changing timer type will reset your current session. Are you sure?');
-            if (!confirmed) return;
-        }
-        setTimerType(type);
-        setCurrentCycleCount(0); 
-        switch(type) {
-            case 'pomodoro':
-                setTime(120 * 60); 
-                break;
-            case 'shortBreak':
-                setTime(15 * 60); 
-                break;
-            case 'longBreak':
-                setTime(50 * 60);
-                break;
-            default:
-                setTime(120 * 60); 
-        }
-        setSessionStarted(false);
-        setIsActive(false);
-    };
+  // Show modal to edit all timer settings
+  const handleOpenEditModal = () => {
+    // Fill temp values from current durations
+    setTempPomodoro(pomodoroDuration / 60);
+    setTempShortBreak(shortBreakDuration / 60);
+    setTempLongBreak(longBreakDuration / 60);
+    setShowEditModal(true);
+  };
 
-    const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
+  // Save the updated timer settings
+  const handleSaveTimerSettings = async () => {
+    const newPomodoro = tempPomodoro * 60;
+    const newShortBreak = tempShortBreak * 60;
+    const newLongBreak = tempLongBreak * 60;
 
-    return (
-        <div className="min-h-screen bg-black font-sans select-none">
-            <Header username={username} isTimerActive={sessionStarted} />
-            <div className="max-w-[1500px] mx-auto px-8 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-1">
-                        <TaskList />
-                    </div>
-                    <div className="lg:col-span-2">
-                        <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
-                            <div className="flex justify-center mb-12">
-                                <div className="flex gap-4 bg-zinc-900 p-1 rounded-lg">
-                                    <button 
-                                        onClick={() => handleTimerTypeChange('pomodoro')}
-                                        className={`px-6 py-2 rounded-lg transition-colors ${
-                                            timerType === 'pomodoro' 
-                                                ? 'bg-zinc-800 text-white' 
-                                                : 'text-gray-400 hover:text-white'
-                                        }`}
-                                    >
-                                        Pomodoro
-                                    </button>
-                                    <button 
-                                        onClick={() => handleTimerTypeChange('shortBreak')}
-                                        className={`px-6 py-2 rounded-lg transition-colors ${
-                                            timerType === 'shortBreak' 
-                                                ? 'bg-zinc-800 text-white' 
-                                                : 'text-gray-400 hover:text-white'
-                                        }`}
-                                    >
-                                        Short Break
-                                    </button>
-                                    <button 
-                                        onClick={() => handleTimerTypeChange('longBreak')}
-                                        className={`px-6 py-2 rounded-lg transition-colors ${
-                                            timerType === 'longBreak' 
-                                                ? 'bg-zinc-800 text-white' 
-                                                : 'text-gray-400 hover:text-white'
-                                        }`}
-                                    >
-                                        Long Break
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="text-center mb-12">
-                                <h2 className="text-8xl font-bold text-white font-mono tracking-widest">
-                                    {formatTime(time)}
-                                </h2>
-                            </div>
-                            <div className="flex justify-center gap-6">
-                                <button
-                                    onClick={toggleTimer}
-                                    className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                                >
-                                    {isActive ? 
-                                        <Pause className="w-8 h-8" /> : 
-                                        <Play className="w-8 h-8" />
-                                    }
-                                </button>
-                                <button
-                                    onClick={resetTimer}
-                                    className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                                >
-                                    <RotateCcw className="w-8 h-8" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="lg:col-span-1 space-y-4">
-                        <MusicPlayer />
-                        <QuoteSection />
-                    </div>
+    setPomodoroDuration(newPomodoro);
+    setShortBreakDuration(newShortBreak);
+    setLongBreakDuration(newLongBreak);
+
+    // If the timer isn't running, update the displayed time too
+    if (!sessionStarted) {
+      if (timerType === 'pomodoro') setTime(newPomodoro);
+      else if (timerType === 'shortBreak') setTime(newShortBreak);
+      else if (timerType === 'longBreak') setTime(newLongBreak);
+    }
+
+    // Save to backend
+    try {
+      const token = localStorage.getItem('userToken');
+      const response = await fetch('http://localhost:5000/profile/update', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          timerSettings: {
+            pomodoro: newPomodoro,
+            shortBreak: newShortBreak,
+            longBreak: newLongBreak
+          }
+        })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save timer settings');
+      }
+      // Optionally handle success
+    } catch (error) {
+      console.error('Error saving timer settings:', error);
+    }
+
+    setShowEditModal(false);
+  };
+
+  const handleCloseModal = () => {
+    setShowEditModal(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-black font-sans select-none">
+      <Header username={username} isTimerActive={sessionStarted} />
+      <div className="max-w-[1500px] mx-auto px-8 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-1">
+            <TaskList />
+          </div>
+          <div className="lg:col-span-2">
+            <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
+              <div className="flex justify-center mb-12">
+                <div className="flex gap-4 bg-zinc-900 p-1 rounded-lg">
+                  <button
+                    onClick={() => handleTimerTypeChange('pomodoro')}
+                    className={`px-6 py-2 rounded-lg transition-colors ${
+                      timerType === 'pomodoro'
+                        ? 'bg-zinc-800 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Pomodoro
+                  </button>
+                  <button
+                    onClick={() => handleTimerTypeChange('shortBreak')}
+                    className={`px-6 py-2 rounded-lg transition-colors ${
+                      timerType === 'shortBreak'
+                        ? 'bg-zinc-800 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Short Break
+                  </button>
+                  <button
+                    onClick={() => handleTimerTypeChange('longBreak')}
+                    className={`px-6 py-2 rounded-lg transition-colors ${
+                      timerType === 'longBreak'
+                        ? 'bg-zinc-800 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Long Break
+                  </button>
                 </div>
+              </div>
+              {/* Timer Display */}
+              <div className="text-center mb-6">
+                <h2 className="text-8xl font-bold text-white font-mono tracking-widest">
+                  {formatTime(time)}
+                </h2>
+              </div>
+
+              {/* Controls */}
+              <div className="flex justify-center gap-6 mb-6">
+                <button
+                  onClick={toggleTimer}
+                  className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                >
+                  {isActive ? (
+                    <Pause className="w-8 h-8" />
+                  ) : (
+                    <Play className="w-8 h-8" />
+                  )}
+                </button>
+                <button
+                  onClick={resetTimer}
+                  className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                >
+                  <RotateCcw className="w-8 h-8" />
+                </button>
+              </div>
+
+              {/* Edit Times Button */}
+              <div className="flex justify-center">
+                <button
+                    onClick={handleOpenEditModal}
+                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                >
+                    <Clock size={20} />
+                    Edit Times
+                </button>
+              </div>
             </div>
+          </div>
+          <div className="lg:col-span-1 space-y-4">
+            <MusicPlayer />
+            <QuoteSection />
+          </div>
         </div>
-    );
+      </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-zinc-900 p-6 rounded-md shadow-lg w-80">
+            <h3 className="text-xl text-white mb-4">Edit Timer Durations</h3>
+            <div className="flex flex-col gap-4 mb-4">
+              <div>
+                <label className="block text-white mb-1">Pomodoro (min):</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={tempPomodoro}
+                  onChange={(e) => setTempPomodoro(parseInt(e.target.value, 10))}
+                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                />
+              </div>
+              <div>
+                <label className="block text-white mb-1">Short Break (min):</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={tempShortBreak}
+                  onChange={(e) => setTempShortBreak(parseInt(e.target.value, 10))}
+                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                />
+              </div>
+              <div>
+                <label className="block text-white mb-1">Long Break (min):</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={tempLongBreak}
+                  onChange={(e) => setTempLongBreak(parseInt(e.target.value, 10))}
+                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleCloseModal}
+                className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTimerSettings}
+                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-500 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default Dashboard;

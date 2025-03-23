@@ -42,7 +42,12 @@ const userSchema = new mongoose.Schema({
         completedAt: { type: Date, default: Date.now },
         wasCompleted: { type: Boolean, default: false },
         wasDeleted: { type: Boolean, default: false }
-    }]
+    }],
+    timerSettings: {
+        pomodoro: { type: Number, default: 50 * 60 },     // 50 minutes
+        shortBreak: { type: Number, default: 10 * 60 },     // 10 minutes
+        longBreak: { type: Number, default: 60 * 60 }       // 1 hour
+    }
 }, {
     timestamps: true
 });
