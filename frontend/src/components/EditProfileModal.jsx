@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Camera, X, Loader2, User } from 'lucide-react';
+import ChangePasswordModal from './ChangePasswordModal';
+import { Lock, Camera, X, Loader2, User } from 'lucide-react';
+
 
 const EditProfileModal = ({ isOpen, onClose, profileData, onUpdate }) => {
     const [loading, setLoading] = useState(false);
@@ -94,7 +96,7 @@ const EditProfileModal = ({ isOpen, onClose, profileData, onUpdate }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 scale-[0.85]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-zinc-950 rounded-2xl border border-zinc-900 shadow-xl w-full max-w-3xl overflow-y-auto my-8">
                 <div className="flex items-center justify-between p-6 border-b border-zinc-900">
                     <h2 className="text-xl font-bold text-gray-200">Edit Profile</h2>
@@ -201,55 +203,8 @@ const EditProfileModal = ({ isOpen, onClose, profileData, onUpdate }) => {
                             </p>
                         </div>
 
-                        <div className="border-t border-zinc-900 pt-6">
-                            <h3 className="text-gray-200 font-medium mb-4">Change Password</h3>
-                            
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-gray-400 text-sm font-medium mb-2">
-                                        Current Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={formData.currentPassword}
-                                        onChange={(e) => setFormData(prev => ({ 
-                                            ...prev, 
-                                            currentPassword: e.target.value 
-                                        }))}
-                                        className="w-full bg-black rounded-lg p-3 text-gray-200 border border-zinc-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-gray-400 text-sm font-medium mb-2">
-                                        New Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={formData.newPassword}
-                                        onChange={(e) => setFormData(prev => ({ 
-                                            ...prev, 
-                                            newPassword: e.target.value 
-                                        }))}
-                                        className="w-full bg-black rounded-lg p-3 text-gray-200 border border-zinc-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-gray-400 text-sm font-medium mb-2">
-                                        Confirm New Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => setFormData(prev => ({ 
-                                            ...prev, 
-                                            confirmPassword: e.target.value 
-                                        }))}
-                                        className="w-full bg-black rounded-lg p-3 text-gray-200 border border-zinc-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
-                                    />
-                                </div>
-                            </div>
+                        <div className="border-t border-zinc-900 pt-6 flex justify-center">
+                            <ChangePasswordModal />
                         </div>
                     </div>
 
