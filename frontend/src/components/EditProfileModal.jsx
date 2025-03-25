@@ -94,8 +94,8 @@ const EditProfileModal = ({ isOpen, onClose, profileData, onUpdate }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-zinc-950 rounded-2xl border border-zinc-900 shadow-xl w-full max-w-2xl overflow-y-auto my-8">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 scale-[0.85]">
+            <div className="bg-zinc-950 rounded-2xl border border-zinc-900 shadow-xl w-full max-w-3xl overflow-y-auto my-8">
                 <div className="flex items-center justify-between p-6 border-b border-zinc-900">
                     <h2 className="text-xl font-bold text-gray-200">Edit Profile</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-200">
