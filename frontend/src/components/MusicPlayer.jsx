@@ -3,6 +3,9 @@ import { Play, Pause, Music, Volume2, ChevronDown } from 'lucide-react';
 import focusAudio from '../music/focus-music.mp3';
 import classicalAudio from '../music/classical-music.mp3';
 import ghibliAudio from '../music/ghibli-music.mp3';
+import rainAudio from '../music/rain-music.mp3';
+import windRisesAudio from '../music/wind-rises.mp3';
+import windRisesGif from '../music/wind-rises.gif';
 
 const MusicPlayer = () => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -10,11 +13,40 @@ const MusicPlayer = () => {
     const [particles, setParticles] = useState([]);
     const [currentTrack, setCurrentTrack] = useState('focus');
     const [showTrackMenu, setShowTrackMenu] = useState(false);
+    const [raindrops, setRaindrops] = useState([]);
+    const [showWindRisesEffect, setShowWindRisesEffect] = useState(false);
 
     const tracks = {
-        focus: { title: 'Focus Music', subtitle: 'Binaural Beats', src: focusAudio },
-        classical: { title: 'Classical', subtitle: 'Relaxing Classics', src: classicalAudio },
-        ghibli: { title: 'Studio Ghibli', subtitle: 'Peaceful Melodies', src: ghibliAudio }
+        focus: { 
+            title: 'Focus Music', 
+            subtitle: 'Binaural Beats', 
+            src: focusAudio,
+            effect: 'particles'
+        },
+        classical: { 
+            title: 'Classical', 
+            subtitle: 'Relaxing Classics', 
+            src: classicalAudio,
+            effect: 'particles'
+        },
+        ghibli: { 
+            title: 'Studio Ghibli', 
+            subtitle: 'Peaceful Melodies', 
+            src: ghibliAudio,
+            effect: 'particles'
+        },
+        rain: { 
+            title: 'Rain Music', 
+            subtitle: 'Calming Rainfall', 
+            src: rainAudio,
+            effect: 'rain'
+        },
+        windRises: { 
+            title: 'Wind Rises', 
+            subtitle: 'Gentle Breezes', 
+            src: windRisesAudio,
+            effect: 'wind'
+        }
     };
 
     const [audio] = useState(() => {
@@ -60,17 +92,26 @@ const MusicPlayer = () => {
         audio.src = tracks[trackKey].src;
         setCurrentTrack(trackKey);
         setShowTrackMenu(false);
+        
+        // Reset all visual effects
+        setParticles([]);
+        setRaindrops([]);
+        setShowWindRisesEffect(false);
+        
         if (wasPlaying) {
             try {
                 await audio.play();
+                setIsPlaying(true);
             } catch (error) {
                 console.error('Error playing new track:', error);
+                setIsPlaying(false);
             }
         }
     };
 
+    // Handle particle effect for original tracks
     useEffect(() => {
-        if (isPlaying) {
+        if (isPlaying && tracks[currentTrack].effect === 'particles') {
             const newParticles = Array.from({ length: 80 }, () => ({
                 id: Math.random(),
                 x: Math.random() * 100,
@@ -79,13 +120,37 @@ const MusicPlayer = () => {
                 speed: Math.random() * 1 + 0.5,
             }));
             setParticles(newParticles);
-        } else {
+        } else if (!isPlaying || tracks[currentTrack].effect !== 'particles') {
             setParticles([]);
         }
-    }, [isPlaying]);
+    }, [isPlaying, currentTrack]);
 
+    // Handle rain effect for rain music
     useEffect(() => {
-        if (!isPlaying) return;
+        if (isPlaying && tracks[currentTrack].effect === 'rain') {
+            const newRaindrops = Array.from({ length: 100 }, () => ({
+                id: Math.random(),
+                x: Math.random() * 100,
+                y: Math.random() * 50 - 50, // Start above the screen
+                size: Math.random() * 2 + 1,
+                speed: Math.random() * 3 + 3,
+                opacity: Math.random() * 0.4 + 0.2,
+                length: Math.random() * 10 + 10
+            }));
+            setRaindrops(newRaindrops);
+        } else if (!isPlaying || tracks[currentTrack].effect !== 'rain') {
+            setRaindrops([]);
+        }
+    }, [isPlaying, currentTrack]);
+
+    // Handle wind rises effect
+    useEffect(() => {
+        setShowWindRisesEffect(isPlaying && tracks[currentTrack].effect === 'wind');
+    }, [isPlaying, currentTrack]);
+
+    // Animation loop for particles
+    useEffect(() => {
+        if (!isPlaying || particles.length === 0) return;
 
         const interval = setInterval(() => {
             setParticles(prev => prev.map(particle => ({
@@ -106,11 +171,39 @@ const MusicPlayer = () => {
         }, 50);
 
         return () => clearInterval(interval);
-    }, [isPlaying]);
+    }, [isPlaying, particles.length]);
+
+    // Animation loop for raindrops
+    useEffect(() => {
+        if (!isPlaying || raindrops.length === 0) return;
+
+        const interval = setInterval(() => {
+            setRaindrops(prev => prev.map(drop => ({
+                ...drop,
+                y: drop.y + drop.speed,
+            })).filter(p => p.y < 110)); // Keep until slightly below screen
+
+            // Add new raindrops
+            if (raindrops.length < 150) {
+                setRaindrops(prev => [...prev, {
+                    id: Math.random(),
+                    x: Math.random() * 100,
+                    y: -10,
+                    size: Math.random() * 2 + 1,
+                    speed: Math.random() * 3 + 3,
+                    opacity: Math.random() * 0.4 + 0.2,
+                    length: Math.random() * 10 + 10
+                }]);
+            }
+        }, 30);
+
+        return () => clearInterval(interval);
+    }, [isPlaying, raindrops.length]);
 
     return (
         <div className="relative">
-            {isPlaying && (
+            {/* Particle effect for original tracks */}
+            {particles.length > 0 && (
                 <div className="fixed inset-0 pointer-events-none z-10">
                     {particles.map(particle => (
                         <div
@@ -125,6 +218,39 @@ const MusicPlayer = () => {
                         />
                     ))}
                 </div>
+            )}
+
+            {/* Rain effect for rain music */}
+            {raindrops.length > 0 && (
+                <div className="fixed inset-0 pointer-events-none z-10">
+                    {raindrops.map(drop => (
+                        <div
+                            key={drop.id}
+                            className="absolute bg-blue-100"
+                            style={{
+                                left: `${drop.x}%`,
+                                top: `${drop.y}%`,
+                                width: `${drop.size}px`,
+                                height: `${drop.length}px`,
+                                opacity: drop.opacity,
+                                transform: 'rotate(15deg)',
+                                filter: 'blur(0.5px)'
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Wind Rises gif effect */}
+            {showWindRisesEffect && (
+                <div 
+                    className="fixed inset-0 pointer-events-none z-5 bg-cover bg-center"
+                    style={{
+                        backgroundImage: `url(${windRisesGif})`,
+                        opacity: 0.15,
+                        mixBlendMode: 'soft-light'
+                    }}
+                />
             )}
 
             <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl space-y-6">
