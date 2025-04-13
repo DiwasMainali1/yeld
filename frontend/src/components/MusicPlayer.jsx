@@ -1,51 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Music, Volume2, ChevronDown } from 'lucide-react';
+import { Play, Pause, Music, Volume2, ChevronDown, X } from 'lucide-react';
 import focusAudio from '../music/focus-music.mp3';
 import classicalAudio from '../music/classical-music.mp3';
 import ghibliAudio from '../music/ghibli-music.mp3';
-import rainAudio from '../music/rain-music.mp3';
 import windRisesAudio from '../music/wind-rises.mp3';
-import windRisesGif from '../music/wind-rises.gif';
+import ambienceAudio from '../music/ambient-music.mp3'; // Added a 5th track
 
 const MusicPlayer = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [volume, setVolume] = useState(0.5);
-    const [particles, setParticles] = useState([]);
     const [currentTrack, setCurrentTrack] = useState('focus');
-    const [showTrackMenu, setShowTrackMenu] = useState(false);
-    const [raindrops, setRaindrops] = useState([]);
-    const [showWindRisesEffect, setShowWindRisesEffect] = useState(false);
-
+    const [showModal, setShowModal] = useState(false);
+    
     const tracks = {
         focus: { 
             title: 'Focus Music', 
             subtitle: 'Binaural Beats', 
             src: focusAudio,
-            effect: 'particles'
+            theme: 'focus'
         },
         classical: { 
             title: 'Classical', 
             subtitle: 'Relaxing Classics', 
             src: classicalAudio,
-            effect: 'particles'
+            theme: 'classical'
         },
         ghibli: { 
             title: 'Studio Ghibli', 
             subtitle: 'Peaceful Melodies', 
             src: ghibliAudio,
-            effect: 'particles'
-        },
-        rain: { 
-            title: 'Rain Music', 
-            subtitle: 'Calming Rainfall', 
-            src: rainAudio,
-            effect: 'rain'
+            theme: 'ghibli'
         },
         windRises: { 
             title: 'Wind Rises', 
             subtitle: 'Gentle Breezes', 
             src: windRisesAudio,
-            effect: 'wind'
+            theme: 'wind'
+        },
+        ambience: { 
+            title: 'Rain Sounds', 
+            subtitle: 'Ethereal Atmosphere', 
+            src: ambienceAudio,
+            theme: 'ambient'
         }
     };
 
@@ -86,17 +82,25 @@ const MusicPlayer = () => {
         }
     };
 
+    useEffect(() => {
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+        
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+        
+        return () => {
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+        };
+    }, [audio]);
+
     const changeTrack = async (trackKey) => {
         const wasPlaying = !audio.paused;
         audio.pause();
         audio.src = tracks[trackKey].src;
         setCurrentTrack(trackKey);
-        setShowTrackMenu(false);
-        
-        // Reset all visual effects
-        setParticles([]);
-        setRaindrops([]);
-        setShowWindRisesEffect(false);
+        setShowModal(false);
         
         if (wasPlaying) {
             try {
@@ -109,216 +113,411 @@ const MusicPlayer = () => {
         }
     };
 
-    // Handle particle effect for original tracks
+    // Close modal if clicked outside
     useEffect(() => {
-        if (isPlaying && tracks[currentTrack].effect === 'particles') {
-            const newParticles = Array.from({ length: 80 }, () => ({
-                id: Math.random(),
-                x: Math.random() * 100,
-                y: Math.random() * 100,
-                size: Math.random() * 3 + 1,
-                speed: Math.random() * 1 + 0.5,
-            }));
-            setParticles(newParticles);
-        } else if (!isPlaying || tracks[currentTrack].effect !== 'particles') {
-            setParticles([]);
-        }
-    }, [isPlaying, currentTrack]);
-
-    // Handle rain effect for rain music
-    useEffect(() => {
-        if (isPlaying && tracks[currentTrack].effect === 'rain') {
-            const newRaindrops = Array.from({ length: 100 }, () => ({
-                id: Math.random(),
-                x: Math.random() * 100,
-                y: Math.random() * 50 - 50, // Start above the screen
-                size: Math.random() * 2 + 1,
-                speed: Math.random() * 3 + 3,
-                opacity: Math.random() * 0.4 + 0.2,
-                length: Math.random() * 10 + 10
-            }));
-            setRaindrops(newRaindrops);
-        } else if (!isPlaying || tracks[currentTrack].effect !== 'rain') {
-            setRaindrops([]);
-        }
-    }, [isPlaying, currentTrack]);
-
-    // Handle wind rises effect
-    useEffect(() => {
-        setShowWindRisesEffect(isPlaying && tracks[currentTrack].effect === 'wind');
-    }, [isPlaying, currentTrack]);
-
-    // Animation loop for particles
-    useEffect(() => {
-        if (!isPlaying || particles.length === 0) return;
-
-        const interval = setInterval(() => {
-            setParticles(prev => prev.map(particle => ({
-                ...particle,
-                y: particle.y - particle.speed,
-                x: particle.x + Math.sin(particle.y * 0.1) * 0.2,
-            })).filter(p => p.y > -10));
-
-            if (Math.random() < 0.3) {
-                setParticles(prev => [...prev, {
-                    id: Math.random(),
-                    x: Math.random() * 100,
-                    y: 100,
-                    size: Math.random() * 3 + 1,
-                    speed: Math.random() * 1 + 0.5,
-                }]);
+        const handleClickOutside = (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                setShowModal(false);
             }
-        }, 50);
+        };
+        
+        if (showModal) {
+            document.addEventListener('click', handleClickOutside);
+        }
+        
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [showModal]);
 
-        return () => clearInterval(interval);
-    }, [isPlaying, particles.length]);
-
-    // Animation loop for raindrops
+    // Close modal on escape key
     useEffect(() => {
-        if (!isPlaying || raindrops.length === 0) return;
-
-        const interval = setInterval(() => {
-            setRaindrops(prev => prev.map(drop => ({
-                ...drop,
-                y: drop.y + drop.speed,
-            })).filter(p => p.y < 110)); // Keep until slightly below screen
-
-            // Add new raindrops
-            if (raindrops.length < 150) {
-                setRaindrops(prev => [...prev, {
-                    id: Math.random(),
-                    x: Math.random() * 100,
-                    y: -10,
-                    size: Math.random() * 2 + 1,
-                    speed: Math.random() * 3 + 3,
-                    opacity: Math.random() * 0.4 + 0.2,
-                    length: Math.random() * 10 + 10
-                }]);
+        const handleEscKey = (e) => {
+            if (e.key === 'Escape') {
+                setShowModal(false);
             }
-        }, 30);
+        };
+        
+        if (showModal) {
+            document.addEventListener('keydown', handleEscKey);
+        }
+        
+        return () => {
+            document.removeEventListener('keydown', handleEscKey);
+        };
+    }, [showModal]);
 
-        return () => clearInterval(interval);
-    }, [isPlaying, raindrops.length]);
-
-    return (
-        <div className="relative">
-            {/* Particle effect for original tracks */}
-            {particles.length > 0 && (
-                <div className="fixed inset-0 pointer-events-none z-10">
-                    {particles.map(particle => (
-                        <div
-                            key={particle.id}
-                            className="absolute rounded-full bg-white opacity-20"
-                            style={{
-                                left: `${particle.x}%`,
-                                top: `${particle.y}%`,
-                                width: `${particle.size}px`,
-                                height: `${particle.size}px`,
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Rain effect for rain music */}
-            {raindrops.length > 0 && (
-                <div className="fixed inset-0 pointer-events-none z-10">
-                    {raindrops.map(drop => (
-                        <div
-                            key={drop.id}
-                            className="absolute bg-blue-100"
-                            style={{
-                                left: `${drop.x}%`,
-                                top: `${drop.y}%`,
-                                width: `${drop.size}px`,
-                                height: `${drop.length}px`,
-                                opacity: drop.opacity,
-                                transform: 'rotate(15deg)',
-                                filter: 'blur(0.5px)'
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Wind Rises gif effect */}
-            {showWindRisesEffect && (
+    // Animation Components
+    const FocusAnimation = () => (
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/5 to-blue-900/5"></div>
+            {[...Array(3)].map((_, i) => (
                 <div 
-                    className="fixed inset-0 pointer-events-none z-5 bg-cover bg-center"
+                    key={i}
+                    className={`absolute left-1/2 top-1/2 rounded-full animate-focus-pulse-${i+1}`}
                     style={{
-                        backgroundImage: `url(${windRisesGif})`,
-                        opacity: 0.15,
-                        mixBlendMode: 'soft-light'
+                        width: `${(i + 1) * 150}px`,
+                        height: `${(i + 1) * 150}px`,
+                        background: `radial-gradient(circle, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0.05) 50%, transparent 70%)`,
+                        transform: 'translate(-50%, -50%)',
+                        opacity: 0.6 - (i * 0.15)
                     }}
                 />
-            )}
+            ))}
+        </div>
+    );
 
-            <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl space-y-6">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                        <Music className="w-8 h-8 text-gray-400" />
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-gray-200 text-xl font-semibold">
-                                    {tracks[currentTrack].title}
-                                </h3>
-                                <button 
-                                    onClick={() => setShowTrackMenu(!showTrackMenu)}
-                                    className="text-gray-400 hover:text-white transition-colors"
-                                >
-                                    <ChevronDown className={`w-5 h-5 transform transition-transform ${showTrackMenu ? 'rotate-180' : ''}`} />
-                                </button>
-                            </div>
-                            <p className="text-gray-500">{tracks[currentTrack].subtitle}</p>
-                        </div>
+    const ClassicalAnimation = () => {
+        const notePositions = Array.from({ length: 12 }, (_, i) => ({
+            left: `${5 + (i * 8)}%`,
+            size: `${20 + Math.floor(i % 3) * 8}px`,
+            delay: `${i * 0.8}s`,
+            duration: `${12 + (i % 5) * 2}s`
+        }));
+        
+        const noteSymbols = ['♩', '♪', '♫', '♬', '𝄞'];
+        
+        return (
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-purple-900/5 to-indigo-900/5"></div>
+                {notePositions.map((pos, i) => (
+                    <div 
+                        key={i}
+                        className="absolute text-white/10 animate-float-note"
+                        style={{
+                            left: pos.left,
+                            bottom: '-50px',
+                            fontSize: pos.size,
+                            animationDelay: pos.delay,
+                            animationDuration: pos.duration
+                        }}
+                    >
+                        {noteSymbols[i % noteSymbols.length]}
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    const GhibliAnimation = () => {
+        return (
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-900/5 to-blue-900/5"></div>
+                {Array.from({ length: 20 }, (_, i) => {
+                    const size = 8 + (i % 5) * 3;
+                    const left = 5 + (i * 4.5) % 90;
+                    const delay = i * 0.7;
+                    const duration = 15 + (i % 7) * 2;
+                    
+                    return (
+                        <div 
+                            key={i}
+                            className="absolute animate-petal-fall"
+                            style={{
+                                left: `${left}%`,
+                                top: '-20px',
+                                width: `${size}px`,
+                                height: `${size / 2}px`,
+                                backgroundColor: 'rgba(244, 114, 182, 0.1)',
+                                borderRadius: '100% 0',
+                                transform: 'rotate(45deg)',
+                                animationDelay: `${delay}s`,
+                                animationDuration: `${duration}s`
+                            }}
+                        />
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const WindAnimation = () => (
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/5 to-blue-900/5"></div>
+            {[...Array(5)].map((_, i) => (
+                <div 
+                    key={i}
+                    className="absolute inset-y-0 right-full w-full h-full animate-wind-wave"
+                    style={{
+                        background: `linear-gradient(90deg, transparent 0%, rgba(125, 211, 252, ${0.03 - i * 0.005}) 50%, transparent 100%)`,
+                        animationDelay: `${i * 3}s`,
+                        animationDuration: `${15 + i * 5}s`
+                    }}
+                />
+            ))}
+        </div>
+    );
+
+    const AmbientAnimation = () => {
+        return (
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-teal-900/5 to-purple-900/5"></div>
+                <div className="absolute inset-0">
+                    {Array.from({ length: 30 }, (_, i) => {
+                        const size = 1 + Math.floor(i % 4) * 0.5;
+                        const x = 5 + (i * 3.3) % 90;
+                        const y = 5 + (i * 5.7) % 90;
+                        const opacity = 0.1 + (i % 5) * 0.05;
+                        const duration = 3 + (i % 5) * 2;
+                        
+                        return (
+                            <div 
+                                key={i}
+                                className="absolute rounded-full bg-white animate-pulse-star"
+                                style={{
+                                    width: `${size}px`,
+                                    height: `${size}px`,
+                                    left: `${x}%`,
+                                    top: `${y}%`,
+                                    opacity: opacity,
+                                    animationDuration: `${duration}s`,
+                                    animationDelay: `${i * 0.2}s`
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    // Modal Component
+    const TrackSelectionModal = () => {
+        if (!showModal) return null;
+        
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                <div 
+                    className="relative bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+                        <h3 className="text-xl font-semibold text-white">Select Music</h3>
+                        <button 
+                            onClick={() => setShowModal(false)}
+                            className="text-gray-400 hover:text-white transition-colors"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
                     </div>
                     
-                    <button
-                        onClick={togglePlay}
-                        className="bg-black text-white p-4 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                    >
-                        {isPlaying ? 
-                            <Pause className="w-6 h-6" /> : 
-                            <Play className="w-6 h-6" />
-                        }
-                    </button>
-                </div>
-
-                {showTrackMenu && (
-                    <div className="absolute left-0 right-0 mt-2 bg-zinc-900 rounded-xl border border-zinc-800 shadow-xl z-20">
+                    <div className="max-h-96 overflow-y-auto">
                         {Object.entries(tracks).map(([key, track]) => (
                             <button
                                 key={key}
                                 onClick={() => changeTrack(key)}
-                                className={`w-full p-4 text-left hover:bg-zinc-800 transition-colors duration-200 ${
-                                    currentTrack === key ? 'bg-zinc-800 text-white' : 'text-gray-300'
-                                } first:rounded-t-xl last:rounded-b-xl`}
+                                className={`w-full p-6 text-left border-b border-zinc-800/50 hover:bg-zinc-900 transition-colors duration-200 flex items-start gap-4 ${
+                                    currentTrack === key ? 'bg-zinc-900/70 text-white' : 'text-gray-300'
+                                } last:border-b-0`}
                             >
-                                <div className="font-medium">{track.title}</div>
-                                <div className="text-sm text-gray-500">{track.subtitle}</div>
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                    currentTrack === key 
+                                        ? 'bg-white text-black' 
+                                        : 'bg-zinc-800 text-gray-400'
+                                }`}>
+                                    {currentTrack === key ? (
+                                        <Music className="w-6 h-6" />
+                                    ) : (
+                                        <Play className="w-6 h-6" />
+                                    )}
+                                </div>
+                                <div>
+                                    <div className="font-medium text-lg">{track.title}</div>
+                                    <div className="text-sm text-gray-500">{track.subtitle}</div>
+                                </div>
                             </button>
                         ))}
                     </div>
-                )}
-
-                <div className="flex items-center gap-4 pt-2">
-                    <Volume2 className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                    <div className="w-full">
-                        <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={volume}
-                            onChange={handleVolumeChange}
-                            className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white focus:outline-none focus:ring-2 focus:ring-white/20"
-                        />
-                    </div>
-                    <span className="text-sm text-gray-400 w-12 text-right">
-                        {Math.round(volume * 100)}%
-                    </span>
                 </div>
             </div>
+        );
+    };
+
+    return (
+        <div className="relative">
+            {/* Global animations (keep these for background effect) */}
+            {isPlaying && (
+                <>
+                    {currentTrack === 'focus' && <FocusAnimation />}
+                    {currentTrack === 'classical' && <ClassicalAnimation />}
+                    {currentTrack === 'ghibli' && <GhibliAnimation />}
+                    {currentTrack === 'windRises' && <WindAnimation />}
+                    {currentTrack === 'ambience' && <AmbientAnimation />}
+                </>
+            )}
+    
+            {/* Animation keyframes */}
+            <style jsx global>{`
+                /* Animation keyframes remain unchanged */
+                @keyframes focusPulse1 {
+                    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
+                    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.3; }
+                    100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
+                }
+                @keyframes focusPulse2 {
+                    0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.45; }
+                    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.25; }
+                    100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.45; }
+                }
+                @keyframes focusPulse3 {
+                    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.3; }
+                    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.15; }
+                    100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.3; }
+                }
+                
+                .animate-focus-pulse-1 {
+                    animation: focusPulse1 8s infinite ease-in-out;
+                }
+                .animate-focus-pulse-2 {
+                    animation: focusPulse2 10s infinite ease-in-out;
+                }
+                .animate-focus-pulse-3 {
+                    animation: focusPulse3 12s infinite ease-in-out;
+                }
+                
+                /* Classical notes animation */
+                @keyframes floatNote {
+                    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+                    10% { opacity: 0.7; }
+                    90% { opacity: 0.5; }
+                    100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+                }
+                
+                .animate-float-note {
+                    animation: floatNote 15s linear infinite;
+                    will-change: transform, opacity;
+                }
+                
+                /* Ghibli petals animation */
+                @keyframes petalFall {
+                    0% { transform: translateY(0) rotate(45deg); opacity: 0; }
+                    10% { opacity: 0.7; }
+                    40% { transform: translate(20px, 40vh) rotate(90deg); opacity: 0.6; }
+                    70% { transform: translate(0px, 80vh) rotate(180deg); opacity: 0.4; }
+                    100% { transform: translate(-20px, 120vh) rotate(225deg); opacity: 0; }
+                }
+                
+                .animate-petal-fall {
+                    animation: petalFall 20s ease-in-out infinite;
+                    will-change: transform, opacity;
+                }
+                
+                /* Wind animation */
+                @keyframes windWave {
+                    0% { transform: translateX(0%); }
+                    100% { transform: translateX(100%); }
+                }
+                
+                .animate-wind-wave {
+                    animation: windWave 15s linear infinite;
+                    will-change: transform;
+                }
+                
+                /* Ambient stars animation */
+                @keyframes pulseStar {
+                    0% { transform: scale(1); opacity: 0.1; }
+                    50% { transform: scale(1.5); opacity: 0.3; }
+                    100% { transform: scale(1); opacity: 0.1; }
+                }
+                
+                .animate-pulse-star {
+                    animation: pulseStar 4s ease-in-out infinite;
+                    will-change: transform, opacity;
+                }
+            `}</style>
+    
+            {/* Main player UI with card-specific animation */}
+            <div className="rounded-2xl border border-zinc-900 shadow-xl relative overflow-hidden">
+                {/* Card-specific animation */}
+                {isPlaying && (
+                    <div className="absolute inset-0 z-0">
+                        {currentTrack === 'focus' && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 to-blue-900/20">
+                                {[...Array(3)].map((_, i) => (
+                                    <div 
+                                        key={i}
+                                        className={`absolute left-1/2 top-1/2 rounded-full animate-focus-pulse-${i+1}`}
+                                        style={{
+                                            width: `${(i + 1) * 100}px`,
+                                            height: `${(i + 1) * 100}px`,
+                                            background: `radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0.1) 50%, transparent 70%)`,
+                                            transform: 'translate(-50%, -50%)',
+                                            opacity: 0.8 - (i * 0.15)
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                        {currentTrack === 'classical' && (
+                            <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-indigo-900/20"></div>
+                        )}
+                        {currentTrack === 'ghibli' && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-pink-900/20 to-blue-900/20"></div>
+                        )}
+                        {currentTrack === 'windRises' && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/20"></div>
+                        )}
+                        {currentTrack === 'ambience' && (
+                            <div className="absolute inset-0 bg-gradient-to-b from-teal-900/20 to-purple-900/20"></div>
+                        )}
+                    </div>
+                )}
+                
+                {/* Content with background blur */}
+                <div className="bg-zinc-950/70 backdrop-blur-sm p-8 space-y-6 relative z-10">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                            <Music className="w-8 h-8 text-gray-400" />
+                            <div className="relative"> {/* Track selection with modal trigger */}
+                                <div 
+                                    className="cursor-pointer group" 
+                                    onClick={() => setShowModal(true)}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-gray-200 text-xl font-semibold group-hover:text-white transition-colors">
+                                            {tracks[currentTrack].title}
+                                        </h3>
+                                        <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                                    </div>
+                                    <p className="text-gray-500">{tracks[currentTrack].subtitle}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button
+                            onClick={togglePlay}
+                            className="bg-black text-white p-4 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                        >
+                            {isPlaying ? 
+                                <Pause className="w-6 h-6" /> : 
+                                <Play className="w-6 h-6" />
+                            }
+                        </button>
+                    </div>
+    
+                    <div className="flex items-center gap-4 pt-2">
+                        <Volume2 className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                        <div className="w-full">
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={volume}
+                                onChange={handleVolumeChange}
+                                className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                        </div>
+                        <span className="text-sm text-gray-400 w-12 text-right">
+                            {Math.round(volume * 100)}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            {/* Track Selection Modal */}
+            <TrackSelectionModal />
         </div>
     );
 };
