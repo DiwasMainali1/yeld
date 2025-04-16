@@ -183,7 +183,7 @@ const MusicPlayer = () => {
                 {notePositions.map((pos, i) => (
                     <div 
                         key={i}
-                        className="absolute text-white/10 animate-float-note"
+                        className="absolute text-purple-700/40 animate-float-note"
                         style={{
                             left: pos.left,
                             bottom: '-50px',
@@ -202,7 +202,7 @@ const MusicPlayer = () => {
     const GhibliAnimation = () => {
         return (
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-900/5 to-blue-900/5"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-700/10 to-blue-600/10"></div>
                 {Array.from({ length: 20 }, (_, i) => {
                     const size = 8 + (i % 5) * 3;
                     const left = 5 + (i * 4.5) % 90;
@@ -218,7 +218,7 @@ const MusicPlayer = () => {
                                 top: '-20px',
                                 width: `${size}px`,
                                 height: `${size / 2}px`,
-                                backgroundColor: 'rgba(244, 114, 182, 0.1)',
+                                backgroundColor: '#2f94c6',
                                 borderRadius: '100% 0',
                                 transform: 'rotate(45deg)',
                                 animationDelay: `${delay}s`,
@@ -281,7 +281,6 @@ const MusicPlayer = () => {
         );
     };
 
-    // Modal Component
     const TrackSelectionModal = () => {
         if (!showModal) return null;
         
@@ -336,7 +335,6 @@ const MusicPlayer = () => {
 
     return (
         <div className="relative">
-            {/* Global animations (keep these for background effect) */}
             {isPlaying && (
                 <>
                     {currentTrack === 'focus' && <FocusAnimation />}
