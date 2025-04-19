@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Play, Pause, RotateCcw, Clock } from 'lucide-react';
 import Header from './Header';
 import MusicPlayer from './MusicPlayer';
 import QuoteSection from './QuoteSection';
 import Alarm from '../music/notification.mp3';
 import TaskList from './Tasklist';
+
+// Memoize MusicPlayer to prevent re-renders when Dashboard state changes
+const MemoizedMusicPlayer = memo(MusicPlayer);
+const MemoizedQuoteSection = memo(QuoteSection);
+const MemoizedTaskList = memo(TaskList);
 
 function Dashboard() {
   // Timer duration states (in seconds)
@@ -20,7 +25,6 @@ function Dashboard() {
   const [currentCycleCount, setCurrentCycleCount] = useState(0);
 
   // Other states
-  const [tasks, setTasks] = useState([]);
   const [username, setUsername] = useState('');
   const [totalTimeStudied, setTotalTimeStudied] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
@@ -285,10 +289,11 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-black font-sans select-none">
       <Header username={username} isTimerActive={sessionStarted} />
+      
       <div className="max-w-[1500px] mx-auto px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
-            <TaskList />
+            <MemoizedTaskList />
           </div>
           <div className="lg:col-span-2">
             <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
@@ -366,8 +371,11 @@ function Dashboard() {
             </div>
           </div>
           <div className="lg:col-span-1 space-y-4">
-            <MusicPlayer />
-            <QuoteSection />
+            {/* This is key - wrap MusicPlayer in a stable div that won't re-render */}
+            <div>
+              <MemoizedMusicPlayer />
+            </div>
+            <MemoizedQuoteSection />
           </div>
         </div>
       </div>

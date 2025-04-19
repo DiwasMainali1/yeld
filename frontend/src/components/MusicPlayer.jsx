@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Music, Volume2, ChevronDown, X } from 'lucide-react';
 import focusAudio from '../music/focus-music.mp3';
 import classicalAudio from '../music/classical-music.mp3';
@@ -11,6 +11,9 @@ const MusicPlayer = () => {
     const [volume, setVolume] = useState(0.5);
     const [currentTrack, setCurrentTrack] = useState('focus');
     const [showModal, setShowModal] = useState(false);
+    
+    // Use refs for stable audio instance that persists across renders
+    const audioRef = useRef(null);
     
     const tracks = {
         focus: { 
@@ -45,24 +48,30 @@ const MusicPlayer = () => {
         }
     };
 
-    const [audio] = useState(() => {
-        const audioInstance = new Audio(tracks.focus.src);
-        audioInstance.preload = 'auto';
-        audioInstance.loop = true;
-        audioInstance.volume = 0.5;
-        return audioInstance;
-    });
-
+    // Initialize audio only once using useRef
     useEffect(() => {
+        if (!audioRef.current) {
+            audioRef.current = new Audio(tracks.focus.src);
+            audioRef.current.preload = 'auto';
+            audioRef.current.loop = true;
+            audioRef.current.volume = volume;
+        }
+        
+        // Cleanup function
         return () => {
-            audio.pause();
-            audio.currentTime = 0;
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
         };
-    }, [audio]);
+    }, []);
 
+    // Update volume when it changes
     useEffect(() => {
-        audio.volume = volume;
-    }, [volume, audio]);
+        if (audioRef.current) {
+            audioRef.current.volume = volume;
+        }
+    }, [volume]);
 
     const handleVolumeChange = (e) => {
         const newVolume = parseFloat(e.target.value);
@@ -72,9 +81,9 @@ const MusicPlayer = () => {
     const togglePlay = async () => {
         try {
             if (isPlaying) {
-                await audio.pause();
+                await audioRef.current.pause();
             } else {
-                await audio.play();
+                await audioRef.current.play();
             }
             setIsPlaying(!isPlaying);
         } catch (error) {
@@ -82,29 +91,34 @@ const MusicPlayer = () => {
         }
     };
 
+    // Sync isPlaying state with actual audio state
     useEffect(() => {
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
         
-        audio.addEventListener('play', handlePlay);
-        audio.addEventListener('pause', handlePause);
-        
-        return () => {
-            audio.removeEventListener('play', handlePlay);
-            audio.removeEventListener('pause', handlePause);
-        };
-    }, [audio]);
+        if (audioRef.current) {
+            audioRef.current.addEventListener('play', handlePlay);
+            audioRef.current.addEventListener('pause', handlePause);
+            
+            return () => {
+                audioRef.current.removeEventListener('play', handlePlay);
+                audioRef.current.removeEventListener('pause', handlePause);
+            };
+        }
+    }, []);
 
     const changeTrack = async (trackKey) => {
-        const wasPlaying = !audio.paused;
-        audio.pause();
-        audio.src = tracks[trackKey].src;
+        if (!audioRef.current) return;
+        
+        const wasPlaying = !audioRef.current.paused;
+        audioRef.current.pause();
+        audioRef.current.src = tracks[trackKey].src;
         setCurrentTrack(trackKey);
         setShowModal(false);
         
         if (wasPlaying) {
             try {
-                await audio.play();
+                await audioRef.current.play();
                 setIsPlaying(true);
             } catch (error) {
                 console.error('Error playing new track:', error);
@@ -179,11 +193,11 @@ const MusicPlayer = () => {
         
         return (
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-purple-900/5 to-indigo-900/5"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-yellow-900/10"></div>
                 {notePositions.map((pos, i) => (
                     <div 
                         key={i}
-                        className="absolute text-purple-700/40 animate-float-note"
+                        className="absolute text-yellow-700/50 animate-float-note"
                         style={{
                             left: pos.left,
                             bottom: '-50px',
@@ -448,7 +462,7 @@ const MusicPlayer = () => {
                             </div>
                         )}
                         {currentTrack === 'classical' && (
-                            <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-indigo-900/20"></div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-red-900/20 to-yellow-900/20"></div>
                         )}
                         {currentTrack === 'ghibli' && (
                             <div className="absolute inset-0 bg-gradient-to-br from-pink-900/20 to-blue-900/20"></div>
@@ -520,4 +534,4 @@ const MusicPlayer = () => {
     );
 };
 
-export default MusicPlayer;
+export default React.memo(MusicPlayer);
