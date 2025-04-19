@@ -1,10 +1,225 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, Music, Volume2, ChevronDown, X } from 'lucide-react';
 import focusAudio from '../music/focus-music.mp3';
 import classicalAudio from '../music/classical-music.mp3';
 import ghibliAudio from '../music/ghibli-music.mp3';
 import windRisesAudio from '../music/wind-rises.mp3';
 import ambienceAudio from '../music/ambient-music.mp3'; // Added a 5th track
+
+// Create a separate memoized volume control component
+const VolumeControl = React.memo(({ volume, onVolumeChange }) => {
+  const handleChange = (e) => {
+    onVolumeChange(parseFloat(e.target.value));
+  };
+  
+  return (
+    <div className="flex items-center gap-4 pt-2">
+      <Volume2 className="w-5 h-5 text-gray-400 flex-shrink-0" />
+      <div className="w-full">
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={volume}
+          onChange={handleChange}
+          className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        />
+      </div>
+      <span className="text-sm text-gray-400 w-12 text-right">
+        {Math.round(volume * 100)}%
+      </span>
+    </div>
+  );
+});
+
+// Create a separate memoized animations component
+const MusicAnimations = React.memo(({ isPlaying, currentTrack }) => {
+  if (!isPlaying) return null;
+  
+  // Animation Components
+  const FocusAnimation = () => (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/5 to-blue-900/5"></div>
+      {[...Array(3)].map((_, i) => (
+        <div 
+          key={i}
+          className={`absolute left-1/2 top-1/2 rounded-full animate-focus-pulse-${i+1}`}
+          style={{
+            width: `${(i + 1) * 150}px`,
+            height: `${(i + 1) * 150}px`,
+            background: `radial-gradient(circle, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0.05) 50%, transparent 70%)`,
+            transform: 'translate(-50%, -50%)',
+            opacity: 0.6 - (i * 0.15)
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  const ClassicalAnimation = () => {
+    const notePositions = Array.from({ length: 12 }, (_, i) => ({
+      left: `${5 + (i * 8)}%`,
+      size: `${20 + Math.floor(i % 3) * 8}px`,
+      delay: `${i * 0.8}s`,
+      duration: `${12 + (i % 5) * 2}s`
+    }));
+    
+    const noteSymbols = ['♩', '♪', '♫', '♬', '𝄞'];
+    
+    return (
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/5 to-indigo-900/5"></div>
+        {notePositions.map((pos, i) => (
+          <div 
+            key={i}
+            className="absolute text-purple-500/50 animate-float-note"
+            style={{
+              left: pos.left,
+              bottom: '-50px',
+              fontSize: pos.size,
+              animationDelay: pos.delay,
+              animationDuration: pos.duration
+            }}
+          >
+            {noteSymbols[i % noteSymbols.length]}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const GhibliAnimation = () => {
+    return (
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-700/10 to-blue-600/10"></div>
+        {Array.from({ length: 20 }, (_, i) => {
+          const size = 8 + (i % 5) * 3;
+          const left = 5 + (i * 4.5) % 90;
+          const delay = i * 0.7;
+          const duration = 15 + (i % 7) * 2;
+          
+          return (
+            <div 
+              key={i}
+              className="absolute animate-petal-fall"
+              style={{
+                left: `${left}%`,
+                top: '-20px',
+                width: `${size}px`,
+                height: `${size / 2}px`,
+                backgroundColor: '#2f94c6',
+                borderRadius: '100% 0',
+                transform: 'rotate(45deg)',
+                animationDelay: `${delay}s`,
+                animationDuration: `${duration}s`
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
+  const WindAnimation = () => (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/5 to-blue-900/5"></div>
+      {[...Array(5)].map((_, i) => (
+        <div 
+          key={i}
+          className="absolute inset-y-0 right-full w-full h-full animate-wind-wave"
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, rgba(125, 211, 252, ${0.03 - i * 0.005}) 50%, transparent 100%)`,
+            animationDelay: `${i * 3}s`,
+            animationDuration: `${15 + i * 5}s`
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  const AmbientAnimation = () => {
+    return (
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-900/5 to-purple-900/5"></div>
+        <div className="absolute inset-0">
+          {Array.from({ length: 30 }, (_, i) => {
+            const size = 1 + Math.floor(i % 4) * 0.5;
+            const x = 5 + (i * 3.3) % 90;
+            const y = 5 + (i * 5.7) % 90;
+            const opacity = 0.1 + (i % 5) * 0.05;
+            const duration = 3 + (i % 5) * 2;
+            
+            return (
+              <div 
+                key={i}
+                className="absolute rounded-full bg-white animate-pulse-star"
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  opacity: opacity,
+                  animationDuration: `${duration}s`,
+                  animationDelay: `${i * 0.2}s`
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <>
+      {currentTrack === 'focus' && <FocusAnimation />}
+      {currentTrack === 'classical' && <ClassicalAnimation />}
+      {currentTrack === 'ghibli' && <GhibliAnimation />}
+      {currentTrack === 'windRises' && <WindAnimation />}
+      {currentTrack === 'ambience' && <AmbientAnimation />}
+    </>
+  );
+});
+
+// Create a separate memoized card animation component
+const CardAnimation = React.memo(({ isPlaying, currentTrack }) => {
+  if (!isPlaying) return null;
+  
+  return (
+    <div className="absolute inset-0 z-0">
+      {currentTrack === 'focus' && (
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 to-blue-900/20">
+          {[...Array(3)].map((_, i) => (
+            <div 
+              key={i}
+              className={`absolute left-1/2 top-1/2 rounded-full animate-focus-pulse-${i+1}`}
+              style={{
+                width: `${(i + 1) * 100}px`,
+                height: `${(i + 1) * 100}px`,
+                background: `radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0.1) 50%, transparent 70%)`,
+                transform: 'translate(-50%, -50%)',
+                opacity: 0.8 - (i * 0.15)
+              }}
+            />
+          ))}
+        </div>
+      )}
+      {currentTrack === 'classical' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-indigo-900/20"></div>
+      )}
+      {currentTrack === 'ghibli' && (
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-900/20 to-blue-900/20"></div>
+      )}
+      {currentTrack === 'windRises' && (
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/20"></div>
+      )}
+      {currentTrack === 'ambience' && (
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-900/20 to-purple-900/20"></div>
+      )}
+    </div>
+  );
+});
 
 const MusicPlayer = () => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -66,19 +281,19 @@ const MusicPlayer = () => {
         };
     }, []);
 
-    // Update volume when it changes
+    // Update volume when it changes (with useCallback to ensure stability)
     useEffect(() => {
         if (audioRef.current) {
             audioRef.current.volume = volume;
         }
     }, [volume]);
 
-    const handleVolumeChange = (e) => {
-        const newVolume = parseFloat(e.target.value);
+    // Use useCallback for event handlers to prevent them from changing on every render
+    const handleVolumeChange = useCallback((newVolume) => {
         setVolume(newVolume);
-    };
+    }, []);
 
-    const togglePlay = async () => {
+    const togglePlay = useCallback(async () => {
         try {
             if (isPlaying) {
                 await audioRef.current.pause();
@@ -89,7 +304,7 @@ const MusicPlayer = () => {
         } catch (error) {
             console.error('Error toggling audio:', error);
         }
-    };
+    }, [isPlaying]);
 
     // Sync isPlaying state with actual audio state
     useEffect(() => {
@@ -107,7 +322,7 @@ const MusicPlayer = () => {
         }
     }, []);
 
-    const changeTrack = async (trackKey) => {
+    const changeTrack = useCallback(async (trackKey) => {
         if (!audioRef.current) return;
         
         const wasPlaying = !audioRef.current.paused;
@@ -125,7 +340,7 @@ const MusicPlayer = () => {
                 setIsPlaying(false);
             }
         }
-    };
+    }, [tracks]);
 
     // Close modal if clicked outside
     useEffect(() => {
@@ -161,141 +376,8 @@ const MusicPlayer = () => {
         };
     }, [showModal]);
 
-    // Animation Components
-    const FocusAnimation = () => (
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/5 to-blue-900/5"></div>
-            {[...Array(3)].map((_, i) => (
-                <div 
-                    key={i}
-                    className={`absolute left-1/2 top-1/2 rounded-full animate-focus-pulse-${i+1}`}
-                    style={{
-                        width: `${(i + 1) * 150}px`,
-                        height: `${(i + 1) * 150}px`,
-                        background: `radial-gradient(circle, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0.05) 50%, transparent 70%)`,
-                        transform: 'translate(-50%, -50%)',
-                        opacity: 0.6 - (i * 0.15)
-                    }}
-                />
-            ))}
-        </div>
-    );
-
-    const ClassicalAnimation = () => {
-        const notePositions = Array.from({ length: 12 }, (_, i) => ({
-            left: `${5 + (i * 8)}%`,
-            size: `${20 + Math.floor(i % 3) * 8}px`,
-            delay: `${i * 0.8}s`,
-            duration: `${12 + (i % 5) * 2}s`
-        }));
-        
-        const noteSymbols = ['♩', '♪', '♫', '♬', '𝄞'];
-        
-        return (
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-yellow-900/10"></div>
-                {notePositions.map((pos, i) => (
-                    <div 
-                        key={i}
-                        className="absolute text-yellow-700/50 animate-float-note"
-                        style={{
-                            left: pos.left,
-                            bottom: '-50px',
-                            fontSize: pos.size,
-                            animationDelay: pos.delay,
-                            animationDuration: pos.duration
-                        }}
-                    >
-                        {noteSymbols[i % noteSymbols.length]}
-                    </div>
-                ))}
-            </div>
-        );
-    };
-
-    const GhibliAnimation = () => {
-        return (
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-700/10 to-blue-600/10"></div>
-                {Array.from({ length: 20 }, (_, i) => {
-                    const size = 8 + (i % 5) * 3;
-                    const left = 5 + (i * 4.5) % 90;
-                    const delay = i * 0.7;
-                    const duration = 15 + (i % 7) * 2;
-                    
-                    return (
-                        <div 
-                            key={i}
-                            className="absolute animate-petal-fall"
-                            style={{
-                                left: `${left}%`,
-                                top: '-20px',
-                                width: `${size}px`,
-                                height: `${size / 2}px`,
-                                backgroundColor: '#2f94c6',
-                                borderRadius: '100% 0',
-                                transform: 'rotate(45deg)',
-                                animationDelay: `${delay}s`,
-                                animationDuration: `${duration}s`
-                            }}
-                        />
-                    );
-                })}
-            </div>
-        );
-    };
-
-    const WindAnimation = () => (
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/5 to-blue-900/5"></div>
-            {[...Array(5)].map((_, i) => (
-                <div 
-                    key={i}
-                    className="absolute inset-y-0 right-full w-full h-full animate-wind-wave"
-                    style={{
-                        background: `linear-gradient(90deg, transparent 0%, rgba(125, 211, 252, ${0.03 - i * 0.005}) 50%, transparent 100%)`,
-                        animationDelay: `${i * 3}s`,
-                        animationDuration: `${15 + i * 5}s`
-                    }}
-                />
-            ))}
-        </div>
-    );
-
-    const AmbientAnimation = () => {
-        return (
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-teal-900/5 to-purple-900/5"></div>
-                <div className="absolute inset-0">
-                    {Array.from({ length: 30 }, (_, i) => {
-                        const size = 1 + Math.floor(i % 4) * 0.5;
-                        const x = 5 + (i * 3.3) % 90;
-                        const y = 5 + (i * 5.7) % 90;
-                        const opacity = 0.1 + (i % 5) * 0.05;
-                        const duration = 3 + (i % 5) * 2;
-                        
-                        return (
-                            <div 
-                                key={i}
-                                className="absolute rounded-full bg-white animate-pulse-star"
-                                style={{
-                                    width: `${size}px`,
-                                    height: `${size}px`,
-                                    left: `${x}%`,
-                                    top: `${y}%`,
-                                    opacity: opacity,
-                                    animationDuration: `${duration}s`,
-                                    animationDelay: `${i * 0.2}s`
-                                }}
-                            />
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
-
-    const TrackSelectionModal = () => {
+    // Memoized Track Selection Modal component
+    const TrackSelectionModal = React.memo(() => {
         if (!showModal) return null;
         
         return (
@@ -345,19 +427,12 @@ const MusicPlayer = () => {
                 </div>
             </div>
         );
-    };
+    });
 
     return (
         <div className="relative">
-            {isPlaying && (
-                <>
-                    {currentTrack === 'focus' && <FocusAnimation />}
-                    {currentTrack === 'classical' && <ClassicalAnimation />}
-                    {currentTrack === 'ghibli' && <GhibliAnimation />}
-                    {currentTrack === 'windRises' && <WindAnimation />}
-                    {currentTrack === 'ambience' && <AmbientAnimation />}
-                </>
-            )}
+            {/* Global animations */}
+            <MusicAnimations isPlaying={isPlaying} currentTrack={currentTrack} />
     
             {/* Animation keyframes */}
             <style jsx global>{`
@@ -442,39 +517,7 @@ const MusicPlayer = () => {
             {/* Main player UI with card-specific animation */}
             <div className="rounded-2xl border border-zinc-900 shadow-xl relative overflow-hidden">
                 {/* Card-specific animation */}
-                {isPlaying && (
-                    <div className="absolute inset-0 z-0">
-                        {currentTrack === 'focus' && (
-                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 to-blue-900/20">
-                                {[...Array(3)].map((_, i) => (
-                                    <div 
-                                        key={i}
-                                        className={`absolute left-1/2 top-1/2 rounded-full animate-focus-pulse-${i+1}`}
-                                        style={{
-                                            width: `${(i + 1) * 100}px`,
-                                            height: `${(i + 1) * 100}px`,
-                                            background: `radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0.1) 50%, transparent 70%)`,
-                                            transform: 'translate(-50%, -50%)',
-                                            opacity: 0.8 - (i * 0.15)
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                        {currentTrack === 'classical' && (
-                            <div className="absolute inset-0 bg-gradient-to-b from-red-900/20 to-yellow-900/20"></div>
-                        )}
-                        {currentTrack === 'ghibli' && (
-                            <div className="absolute inset-0 bg-gradient-to-br from-pink-900/20 to-blue-900/20"></div>
-                        )}
-                        {currentTrack === 'windRises' && (
-                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/20"></div>
-                        )}
-                        {currentTrack === 'ambience' && (
-                            <div className="absolute inset-0 bg-gradient-to-b from-teal-900/20 to-purple-900/20"></div>
-                        )}
-                    </div>
-                )}
+                <CardAnimation isPlaying={isPlaying} currentTrack={currentTrack} />
                 
                 {/* Content with background blur */}
                 <div className="bg-zinc-950/70 backdrop-blur-sm p-8 space-y-6 relative z-10">
@@ -508,23 +551,11 @@ const MusicPlayer = () => {
                         </button>
                     </div>
     
-                    <div className="flex items-center gap-4 pt-2">
-                        <Volume2 className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                        <div className="w-full">
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={volume}
-                                onChange={handleVolumeChange}
-                                className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white focus:outline-none focus:ring-2 focus:ring-white/20"
-                            />
-                        </div>
-                        <span className="text-sm text-gray-400 w-12 text-right">
-                            {Math.round(volume * 100)}%
-                        </span>
-                    </div>
+                    {/* Separate volume control component */}
+                    <VolumeControl 
+                      volume={volume} 
+                      onVolumeChange={handleVolumeChange} 
+                    />
                 </div>
             </div>
             
