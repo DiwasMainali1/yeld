@@ -288,78 +288,75 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-black font-sans select-none">
-      <Header username={username} isTimerActive={sessionStarted} />
-      
-      <div className="max-w-[1500px] mx-auto px-8 py-12">
+    <Header username={username} isTimerActive={sessionStarted} />
+    
+    <div className="max-w-[1500px] mx-auto px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
+        <div className="lg:col-span-1 order-2 lg:order-1">
             <MemoizedTaskList />
-          </div>
-          <div className="lg:col-span-2">
+        </div>
+        <div className="lg:col-span-2 order-1 lg:order-2">
             <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
-              <div className="flex justify-center mb-12">
+            <div className="flex justify-center mb-12">
                 <div className="flex gap-4 bg-zinc-900 p-1 rounded-lg">
-                  <button
+                <button
                     onClick={() => handleTimerTypeChange('pomodoro')}
                     className={`px-6 py-2 rounded-lg transition-colors ${
-                      timerType === 'pomodoro'
+                    timerType === 'pomodoro'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
-                  >
+                >
                     Pomodoro
-                  </button>
-                  <button
+                </button>
+                <button
                     onClick={() => handleTimerTypeChange('shortBreak')}
                     className={`px-6 py-2 rounded-lg transition-colors ${
-                      timerType === 'shortBreak'
+                    timerType === 'shortBreak'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
-                  >
+                >
                     Short Break
-                  </button>
-                  <button
+                </button>
+                <button
                     onClick={() => handleTimerTypeChange('longBreak')}
                     className={`px-6 py-2 rounded-lg transition-colors ${
-                      timerType === 'longBreak'
+                    timerType === 'longBreak'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
-                  >
+                >
                     Long Break
-                  </button>
+                </button>
                 </div>
-              </div>
-              {/* Timer Display */}
-              <div className="text-center mb-6">
+            </div>
+            <div className="text-center mb-6">
                 <h2 className="text-8xl font-bold text-white font-mono tracking-widest">
-                  {formatTime(time)}
+                {formatTime(time)}
                 </h2>
-              </div>
+            </div>
 
-              {/* Controls */}
-              <div className="flex justify-center gap-6 mb-6">
+            <div className="flex justify-center gap-6 mb-6">
                 <button
-                  onClick={toggleTimer}
-                  className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                onClick={toggleTimer}
+                className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
-                  {isActive ? (
+                {isActive ? (
                     <Pause className="w-8 h-8" />
-                  ) : (
+                ) : (
                     <Play className="w-8 h-8" />
-                  )}
+                )}
                 </button>
                 <button
-                  onClick={resetTimer}
-                  className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                onClick={resetTimer}
+                className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
-                  <RotateCcw className="w-8 h-8" />
+                <RotateCcw className="w-8 h-8" />
                 </button>
-              </div>
+            </div>
 
-              {/* Edit Times Button */}
-              <div className="flex justify-center">
+            <div className="flex justify-center">
                 <button
                     onClick={handleOpenEditModal}
                     className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
@@ -367,73 +364,71 @@ function Dashboard() {
                     <Clock size={20} />
                     Edit Times
                 </button>
-              </div>
             </div>
-          </div>
-          <div className="lg:col-span-1 space-y-4">
-            {/* This is key - wrap MusicPlayer in a stable div that won't re-render */}
+            </div>
+        </div>
+        <div className="lg:col-span-1 order-3">
             <div>
-              <MemoizedMusicPlayer />
+            <MemoizedMusicPlayer />
             </div>
             <MemoizedQuoteSection />
-          </div>
         </div>
-      </div>
+        </div>
+    </div>
 
-      {/* Edit Modal */}
-      {showEditModal && (
+    {showEditModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-zinc-900 p-6 rounded-md shadow-lg w-80">
+        <div className="bg-zinc-900 p-6 rounded-md shadow-lg w-80">
             <h3 className="text-xl text-white mb-4">Edit Timer Durations</h3>
             <div className="flex flex-col gap-4 mb-4">
-              <div>
+            <div>
                 <label className="block text-white mb-1">Pomodoro (min):</label>
                 <input
-                  type="number"
-                  min="1"
-                  value={tempPomodoro}
-                  onChange={(e) => setTempPomodoro(parseInt(e.target.value, 10))}
-                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                type="number"
+                min="1"
+                value={tempPomodoro}
+                onChange={(e) => setTempPomodoro(parseInt(e.target.value, 10))}
+                className="w-full p-2 rounded bg-zinc-800 text-white text-center"
                 />
-              </div>
-              <div>
+            </div>
+            <div>
                 <label className="block text-white mb-1">Short Break (min):</label>
                 <input
-                  type="number"
-                  min="1"
-                  value={tempShortBreak}
-                  onChange={(e) => setTempShortBreak(parseInt(e.target.value, 10))}
-                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                type="number"
+                min="1"
+                value={tempShortBreak}
+                onChange={(e) => setTempShortBreak(parseInt(e.target.value, 10))}
+                className="w-full p-2 rounded bg-zinc-800 text-white text-center"
                 />
-              </div>
-              <div>
+            </div>
+            <div>
                 <label className="block text-white mb-1">Long Break (min):</label>
                 <input
-                  type="number"
-                  min="1"
-                  value={tempLongBreak}
-                  onChange={(e) => setTempLongBreak(parseInt(e.target.value, 10))}
-                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                type="number"
+                min="1"
+                value={tempLongBreak}
+                onChange={(e) => setTempLongBreak(parseInt(e.target.value, 10))}
+                className="w-full p-2 rounded bg-zinc-800 text-white text-center"
                 />
-              </div>
+            </div>
             </div>
             <div className="flex justify-end gap-2">
-              <button
+            <button
                 onClick={handleCloseModal}
                 className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition"
-              >
+            >
                 Cancel
-              </button>
-              <button
+            </button>
+            <button
                 onClick={handleSaveTimerSettings}
                 className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-500 transition"
-              >
+            >
                 Save
-              </button>
+            </button>
             </div>
-          </div>
         </div>
-      )}
+        </div>
+    )}
     </div>
   );
 }
