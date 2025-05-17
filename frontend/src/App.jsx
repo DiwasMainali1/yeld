@@ -1,39 +1,33 @@
-import Home from "./components/Home";
-import Login from "./components/Login";
+import { BrowserRouter, Routes, Route} from "react-router-dom";
 import Register from "./components/Register";
+import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
-import Profile from "./components/Profile";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./components/Home";
+import Header from "./components/Header";
 
-function App() {
+
+function Layout(Outlet) {
   return (
-    <Router>
-      <div className="m-0">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/profile/:username" 
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } 
-          />
-        </Routes>
-      </div>
-    </Router>
+    <>
+      <Header />
+      <main>
+        <Outlet />
+      </main>
+    </>
   );
 }
 
-export default App;
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={Layout(Home)} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={Layout(Dashboard)} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App

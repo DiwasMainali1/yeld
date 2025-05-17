@@ -1,79 +1,23 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { User, LogOut, Settings } from 'lucide-react';
-
-function Header({ username, isTimerActive, isOwnProfile, onEditProfile }) {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const isProfilePage = location.pathname.startsWith('/profile/');
-
-    const handleLogout = () => {
-        if (isTimerActive) {
-            const confirmed = window.confirm('You have an active session. Are you sure you want to logout?');
-            if (!confirmed) return;
-        }
-        localStorage.removeItem('userToken');
-        navigate('/login');
-    };
-    
-    const handleProfile = () => {
-        if (isTimerActive) {
-            const confirmed = window.confirm('You have an active session. Are you sure you want to leave this page?');
-            if (!confirmed) return;
-        }
-        navigate(`/profile/${username}`);
-    };
-
-    return (
-        <nav className="w-full h-20 border-b border-zinc-800 flex items-center justify-between px-8 bg-black">
-            <div className="flex items-center gap-8">
-                <button 
-                    onClick={() => {
-                        if (isTimerActive) {
-                            const confirmed = window.confirm('You have an active session. Are you sure you want to leave this page?');
-                            if (!confirmed) return;
-                        }
-                        navigate('/dashboard');
-                    }}
-                    className="hover:scale-105 transition-transform"
-                >
-                    <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-4xl font-bold tracking-tight">
-                        Yeld
-                    </h1>
+import React from 'react'
+import { Link } from 'react-router-dom'
+const Header = () => {
+  return (
+    <div className="w-full bg-black">
+        <div>
+            <Link to="/register">
+                <button type="button" className="text-black bg-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                    Register
                 </button>
-                <div className="flex items-center gap-2">
-                    <User className="w-5 h-5 text-gray-400" />
-                    <span className="text-gray-200 font-medium">Welcome back, {username}</span>
-                </div>
-            </div>
-            <div className='flex flex-row gap-4'>
-                {isProfilePage && isOwnProfile && (
-                    <button
-                        className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                        onClick={onEditProfile}
-                    >
-                        <Settings size={20} />
-                        Edit Profile
-                    </button>
-                )}
+            </Link>
 
-                <button
-                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                    onClick={handleProfile}
-                >
-                    <User size={20} />
-                    Profile
+            <Link to="/login">
+                <button type="button" className="text-black bg-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                    Login
                 </button>
-
-                <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                </button>
-            </div>
-        </nav>
-    );
+            </Link>
+        </div>
+    </div>
+  )
 }
 
-export default Header;
+export default Header
