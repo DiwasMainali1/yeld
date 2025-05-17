@@ -327,7 +327,6 @@ const Profile = () => {
                 </div>
             </div>
     
-            {/* Task History Modal - Limited to 10 most recent tasks */}
             <TaskHistoryModal 
                 isOpen={showTaskHistory}
                 onClose={() => setShowTaskHistory(false)}

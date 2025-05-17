@@ -94,17 +94,13 @@ const getProfile = async (req, res) => {
         const user = await User.findOne({ username: req.params.username });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Get the 10 most recent task history items
-        const recentTaskHistory = user.taskHistory
-            .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
-            .slice(0, 10);
-
+        // No need to slice taskHistory here as we're now managing the limit in the database
         const profile = {
             username: user.username,
             avatar: user.avatar,
             sessionsCompleted: user.sessionsCompleted,
             totalTimeStudied: user.totalTimeStudied,
-            taskHistory: recentTaskHistory,
+            taskHistory: user.taskHistory,
             createdAt: user.createdAt,
             isOwnProfile: req.user._id.equals(user._id),
             timerSettings: user.timerSettings

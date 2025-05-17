@@ -5,6 +5,7 @@ const TaskList = () => {
   const [newTaskText, setNewTaskText] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const MAX_TASKS = 10; // Maximum number of tasks allowed
 
   useEffect(() => {
     fetchTasks();
@@ -29,10 +30,8 @@ const TaskList = () => {
       }
 
       const data = await response.json();
-      // Sort tasks by creation date (newest first), and limit to 10 tasks
-      const sortedTasks = data
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 10);
+      // Sort tasks by creation date (oldest first)
+      const sortedTasks = data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
       setTasks(sortedTasks);
       setError('');
     } catch (error) {
@@ -48,6 +47,12 @@ const TaskList = () => {
     if (!newTaskText.trim()) return;
 
     try {
+      // Check if we've reached the maximum number of tasks
+      if (tasks.length >= MAX_TASKS) {
+        setError(`You can only have a maximum of ${MAX_TASKS} tasks. Please delete some tasks first.`);
+        return;
+      }
+
       const token = localStorage.getItem('userToken');
       const response = await fetch('http://localhost:5000/tasks', {
         method: 'POST',
@@ -64,9 +69,8 @@ const TaskList = () => {
 
       const newTask = await response.json();
       
-      // Add the new task at the beginning (since we're sorting by newest first)
-      // and ensure we only keep the 10 most recent tasks
-      setTasks(prevTasks => [newTask, ...prevTasks].slice(0, 10));
+      // Add the new task to the end of the list (newest will be at the bottom)
+      setTasks(prevTasks => [...prevTasks, newTask]);
       setNewTaskText('');
       setError('');
     } catch (error) {
@@ -80,6 +84,7 @@ const TaskList = () => {
       const token = localStorage.getItem('userToken');
       const task = tasks.find(t => t._id === taskId);
   
+      // Add to task history if the task was completed
       if (task.completed) {
         await fetch('http://localhost:5000/tasks/history', {
           method: 'POST',
@@ -161,11 +166,16 @@ const TaskList = () => {
           />
           <button
             type="submit"
-            disabled={!newTaskText.trim()}
+            disabled={!newTaskText.trim() || tasks.length >= MAX_TASKS}
             className="bg-zinc-800 text-white px-4 py-2 rounded-xl hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Add
           </button>
+          {tasks.length >= MAX_TASKS && (
+            <p className="text-xs text-red-400">
+              Task limit reached ({MAX_TASKS} maximum)
+            </p>
+          )}
         </div>
       </form>
 
@@ -173,6 +183,9 @@ const TaskList = () => {
         <p className="text-zinc-400 text-center">No tasks yet</p>
       ) : (
         <div>
+          <p className="text-xs text-zinc-500 mb-4 text-center">
+            {tasks.length} of {MAX_TASKS} tasks used
+          </p>
           <ul className="space-y-2">
             {tasks.map((task) => (
               <li
@@ -201,11 +214,6 @@ const TaskList = () => {
               </li>
             ))}
           </ul>
-          {tasks.length === 10 && (
-            <p className="text-xs text-zinc-500 mt-4 text-center italic">
-              Showing 10 most recent tasks
-            </p>
-          )}
         </div>
       )}
     </div>
