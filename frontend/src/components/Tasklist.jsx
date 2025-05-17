@@ -29,10 +29,10 @@ const TaskList = () => {
       }
 
       const data = await response.json();
-      // Sort tasks by creation date, assuming each task has a createdAt field
-      const sortedTasks = data.sort((a, b) => 
-        new Date(a.createdAt) - new Date(b.createdAt)
-      );
+      // Sort tasks by creation date (newest first), and limit to 10 tasks
+      const sortedTasks = data
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 10);
       setTasks(sortedTasks);
       setError('');
     } catch (error) {
@@ -63,8 +63,10 @@ const TaskList = () => {
       }
 
       const newTask = await response.json();
-      // Add new task at the end since it's the newest
-      setTasks(prevTasks => [...prevTasks, newTask]);
+      
+      // Add the new task at the beginning (since we're sorting by newest first)
+      // and ensure we only keep the 10 most recent tasks
+      setTasks(prevTasks => [newTask, ...prevTasks].slice(0, 10));
       setNewTaskText('');
       setError('');
     } catch (error) {
@@ -170,34 +172,41 @@ const TaskList = () => {
       {tasks.length === 0 ? (
         <p className="text-zinc-400 text-center">No tasks yet</p>
       ) : (
-        <ul className="space-y-2">
-          {tasks.map((task) => (
-            <li
-              key={task._id}
-              className="flex items-center gap-3 p-3 hover:bg-zinc-900/50 rounded-lg transition-colors"
-            >
-              <input
-                type="checkbox"
-                checked={task.completed}
-                onChange={() => handleToggle(task._id)}
-                className="w-4 h-4 accent-zinc-400"
-              />
-              <span
-                className={`flex-1 text-white ${
-                  task.completed ? 'line-through text-zinc-500' : ''
-                }`}
+        <div>
+          <ul className="space-y-2">
+            {tasks.map((task) => (
+              <li
+                key={task._id}
+                className="flex items-center gap-3 p-3 hover:bg-zinc-900/50 rounded-lg transition-colors"
               >
-                {task.text}
-              </span>
-              <button
-                onClick={() => handleDelete(task._id)}
-                className="text-red-400 hover:text-red-300 transition-colors p-1"
-              >
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
+                <input
+                  type="checkbox"
+                  checked={task.completed}
+                  onChange={() => handleToggle(task._id)}
+                  className="w-4 h-4 accent-zinc-400"
+                />
+                <span
+                  className={`flex-1 text-white ${
+                    task.completed ? 'line-through text-zinc-500' : ''
+                  }`}
+                >
+                  {task.text}
+                </span>
+                <button
+                  onClick={() => handleDelete(task._id)}
+                  className="text-red-400 hover:text-red-300 transition-colors p-1"
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+          {tasks.length === 10 && (
+            <p className="text-xs text-zinc-500 mt-4 text-center italic">
+              Showing 10 most recent tasks
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

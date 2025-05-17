@@ -16,14 +16,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    profilePhoto: {
+    avatar: {
         type: String,
-        default: ''
-    },
-    bio: {
-        type: String,
-        default: '',
-        maxLength: 500
+        enum: ['fox', 'owl', 'panda', 'penguin', 'koala'],
+        default: 'fox'
     },
     sessionsCompleted: {
         type: Number,
@@ -35,7 +31,8 @@ const userSchema = new mongoose.Schema({
     },
     usernameChanges: {
         type: Number,
-        default: 0
+        default: 0,
+        max: 1 // Now limited to 1 change only
     },
     taskHistory: [{
         text: String,
@@ -45,9 +42,9 @@ const userSchema = new mongoose.Schema({
     }],
     timerSettings: {
         pomodoro: { type: Number, default: 50 * 60 },     // 50 minutes
-        shortBreak: { type: Number, default: 10 * 60 },     // 10 minutes
-        longBreak: { type: Number, default: 60 * 60 }       // 1 hour
-    },
+        shortBreak: { type: Number, default: 10 * 60 },   // 10 minutes
+        longBreak: { type: Number, default: 60 * 60 }     // 1 hour
+    }
 }, {
     timestamps: true
 });

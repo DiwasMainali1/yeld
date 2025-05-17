@@ -13,6 +13,10 @@ const TaskHistoryModal = ({ isOpen, onClose, tasks = [] }) => {
         });
     };
 
+    // Ensure we only display the 10 most recent tasks
+    const recentTasks = tasks.slice(0, 10);
+    const hasMoreTasks = tasks.length > 10;
+
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-hidden">
@@ -27,9 +31,9 @@ const TaskHistoryModal = ({ isOpen, onClose, tasks = [] }) => {
                 </div>
                 
                 <div className="overflow-y-auto max-h-[calc(80vh-8rem)]">
-                    {tasks?.length > 0 ? (
+                    {recentTasks.length > 0 ? (
                         <div className="space-y-4">
-                            {tasks.map((task, index) => (
+                            {recentTasks.map((task, index) => (
                                 <div 
                                     key={index} 
                                     className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 hover:border-zinc-700 transition-colors"
@@ -42,6 +46,12 @@ const TaskHistoryModal = ({ isOpen, onClose, tasks = [] }) => {
                                     </div>
                                 </div>
                             ))}
+                            
+                            {hasMoreTasks && (
+                                <div className="text-center text-zinc-500 py-2 mt-2 border-t border-zinc-800">
+                                    Showing 10 most recent tasks
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="text-center text-zinc-400 py-8">

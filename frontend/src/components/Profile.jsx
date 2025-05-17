@@ -1,17 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, Trophy, Timer, User, Calendar } from 'lucide-react';
+import { Clock, Trophy, Timer, Calendar } from 'lucide-react';
 import Header from './Header';
 import TaskHistoryModal from './TaskHistoryModal';
 import EditProfileModal from './EditProfileModal';
 
+// Import animal avatar images directly
+import foxImage from '../assets/fox.png';
+import owlImage from '../assets/owl.png';
+import pandaImage from '../assets/panda.png';
+import penguinImage from '../assets/penguin.png';
+import koalaImage from '../assets/koala.png';
+
+const animalAvatars = [
+  { id: 'fox', src: foxImage, alt: 'Fox' },
+  { id: 'owl', src: owlImage, alt: 'Owl' },
+  { id: 'panda', src: pandaImage, alt: 'Panda' },
+  { id: 'penguin', src: penguinImage, alt: 'Penguin' },
+  { id: 'koala', src: koalaImage, alt: 'Koala' },
+];
+
 const Profile = () => {
     const [showTaskHistory, setShowTaskHistory] = useState(false);
+    const [showAvatarSelector, setShowAvatarSelector] = useState(false);
     const [showEditProfile, setShowEditProfile] = useState(false);
     const { username } = useParams();
     const navigate = useNavigate();
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [selectedAvatar, setSelectedAvatar] = useState('fox'); // Default avatar
 
     const titles = {
         novice: { 
@@ -66,11 +83,35 @@ const Profile = () => {
         return titles.novice;
     };
 
-    const handleProfileUpdate = (updatedData) => {
-        setProfileData(prev => ({
-            ...prev,
-            ...updatedData
-        }));
+    const handleAvatarChange = async (avatarId) => {
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch('http://localhost:5000/profile/update', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    avatar: avatarId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update avatar');
+            }
+
+            setSelectedAvatar(avatarId);
+            setShowAvatarSelector(false);
+            
+            // Update local profile data
+            setProfileData(prev => ({
+                ...prev,
+                avatar: avatarId
+            }));
+        } catch (error) {
+            console.error('Error updating avatar:', error);
+        }
     };
 
     useEffect(() => {
@@ -104,6 +145,11 @@ const Profile = () => {
                 
                 const data = await response.json();
                 setProfileData(data);
+                
+                // Set selected avatar from data
+                if (data.avatar) {
+                    setSelectedAvatar(data.avatar);
+                }
             } catch (error) {
                 console.error('Error fetching profile data:', error);
             } finally {
@@ -126,29 +172,33 @@ const Profile = () => {
         day: 'numeric'
     });
 
+    // Get current avatar image
+    const currentAvatar = animalAvatars.find(avatar => avatar.id === selectedAvatar) || animalAvatars[0];
+
     return (
         <div className="min-h-screen bg-black font-sans">
             <Header 
                 username={profileData?.username}
                 isOwnProfile={profileData?.isOwnProfile}
-                onEditProfile={() => setShowEditProfile(true)}
             />
             
             <div className="max-w-6xl mx-auto px-8 py-12">
                 <div className="bg-zinc-950 rounded-2xl border border-zinc-900 shadow-xl p-8 mb-8">
                     <div className="flex items-start gap-8">
-                        {/* Profile Photo */}
-                        <div className="w-32 h-32 bg-zinc-900 rounded-full overflow-hidden">
-                            {profileData?.profilePhoto ? (
-                                <img 
-                                    src={profileData.profilePhoto} 
-                                    alt={profileData.username}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <User className="w-16 h-16 text-gray-600" />
-                                </div>
+                        {/* Animal Avatar */}
+                        <div className="relative w-32 h-32 bg-zinc-900 rounded-full overflow-hidden group">
+                            <img 
+                                src={currentAvatar.src} 
+                                alt={currentAvatar.alt}
+                                className="w-full h-full object-cover"
+                            />
+                            {profileData?.isOwnProfile && (
+                                <button
+                                    onClick={() => setShowAvatarSelector(true)}
+                                    className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full text-white"
+                                >
+                                    Change Avatar
+                                </button>
                             )}
                         </div>
                         
@@ -176,10 +226,6 @@ const Profile = () => {
                                 <Calendar className="w-4 h-4" />
                                 <span>Joined {createdAt}</span>
                             </div>
-    
-                            <p className="text-zinc-300">
-                                {profileData?.bio || 'No bio yet'}
-                            </p>
                         </div>
                     </div>
                 </div>
@@ -281,12 +327,52 @@ const Profile = () => {
                 </div>
             </div>
     
+            {/* Task History Modal - Limited to 10 most recent tasks */}
             <TaskHistoryModal 
                 isOpen={showTaskHistory}
                 onClose={() => setShowTaskHistory(false)}
-                tasks={profileData?.taskHistory}
+                tasks={profileData?.taskHistory?.slice(0, 10)}
             />
     
+            {/* Avatar Selection Modal */}
+            {showAvatarSelector && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 w-full max-w-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-white">Choose an Avatar</h2>
+                            <button 
+                                onClick={() => setShowAvatarSelector(false)}
+                                className="text-zinc-400 hover:text-white transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                            {animalAvatars.map(avatar => (
+                                <div 
+                                    key={avatar.id}
+                                    className={`cursor-pointer rounded-lg p-2 transition-all ${selectedAvatar === avatar.id ? 'bg-zinc-800 ring-2 ring-blue-500' : 'hover:bg-zinc-900'}`}
+                                    onClick={() => handleAvatarChange(avatar.id)}
+                                >
+                                    <div className="aspect-square rounded-full overflow-hidden border-2 border-zinc-800">
+                                        <img 
+                                            src={avatar.src} 
+                                            alt={avatar.alt}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <p className="text-center text-white mt-2">{avatar.alt}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Edit Profile Modal */}
             {showEditProfile && (
                 <EditProfileModal
                     isOpen={showEditProfile}

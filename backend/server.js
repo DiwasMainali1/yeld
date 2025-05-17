@@ -3,8 +3,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { mkdirSync } from 'fs';
-import multer from 'multer';
 import { connectDB } from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
@@ -13,10 +11,8 @@ import {
     getDashboard, 
     getProfile, 
     updateSessionStats, 
-    updateProfilePhoto,
     updateProfile 
 } from './controllers/userController.js';
-import { upload, deletePreviousFile } from './middleware/upload.js';
 
 dotenv.config();
 
@@ -37,14 +33,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Create and serve uploads directory
-try {
-    mkdirSync(path.join(__dirname, 'uploads'));
-} catch (err) {
-    if (err.code !== 'EEXIST') throw err;
-}
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // Health check route
 app.get("/", (req, res) => {
     res.json({ status: "Server is running" });
@@ -59,26 +47,13 @@ app.get('/dashboard', protect, getDashboard);
 app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
 
-// Profile update routes
+// Profile update route
 app.put('/profile/update', protect, updateProfile);
-app.put('/profile/:username/photo', protect, deletePreviousFile, upload.single('photo'), updateProfilePhoto);
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     
-    // Handle Multer errors
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ 
-                message: 'File is too large. Maximum size is 5MB' 
-            });
-        }
-        return res.status(400).json({ 
-            message: err.message 
-        });
-    }
-
     // Handle validation errors
     if (err.name === 'ValidationError') {
         return res.status(400).json({ 

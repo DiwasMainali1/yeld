@@ -25,7 +25,8 @@ const registerUser = async (req, res) => {
         const user = await User.create({
             username,
             email,
-            password
+            password,
+            avatar: 'fox' // Default avatar
         });
 
         if (user) {
@@ -88,104 +89,30 @@ const getDashboard = async (req, res) => {
     }
 };
 
-// @desc    Update user profile photo
-// @route   PUT /profile/photo
-// @access  Private
-const updateProfilePhoto = async (req, res) => {
-    try {
-        const requestedUsername = req.params.username;
-        
-        // Find user by username
-        const user = await User.findOne({ username: requestedUsername });
-        
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Check if it's the user's own profile
-        if (user._id.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Not authorized to update this profile' });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded' });
-        }
-
-        // Create the photo URL - Make sure to include the full path
-        const photoUrl = `http://localhost:5000/uploads/${req.file.filename}`;
-        
-        // Log the file details for debugging
-        console.log('File details:', {
-            filename: req.file.filename,
-            path: req.file.path,
-            photoUrl: photoUrl
-        });
-
-        // Update user's profile photo
-        user.profilePhoto = photoUrl;
-        await user.save();
-
-        res.json({
-            profilePhoto: user.profilePhoto,
-            message: 'Photo uploaded successfully'
-        });
-    } catch (error) {
-        console.error('Photo upload error:', error);
-        res.status(500).json({ message: error.message });
-    }
-};
-
 const getProfile = async (req, res) => {
     try {
         const user = await User.findOne({ username: req.params.username });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
+        // Get the 10 most recent task history items
+        const recentTaskHistory = user.taskHistory
+            .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+            .slice(0, 10);
+
         const profile = {
             username: user.username,
-            profilePhoto: user.profilePhoto,
-            bio: user.bio,
+            avatar: user.avatar,
             sessionsCompleted: user.sessionsCompleted,
             totalTimeStudied: user.totalTimeStudied,
-            taskHistory: user.taskHistory.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)),
+            taskHistory: recentTaskHistory,
             createdAt: user.createdAt,
-            isOwnProfile: req.user._id.equals(user._id)
+            isOwnProfile: req.user._id.equals(user._id),
+            timerSettings: user.timerSettings
         };
 
         res.json(profile);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
-    }
-};
-
-// @desc    Update user bio
-// @route   PUT /profile/bio
-// @access  Private
-const updateBio = async (req, res) => {
-    try {
-        const { bio } = req.body;
-        
-        if (!bio && bio !== '') {
-            return res.status(400).json({ message: 'Bio content is required' });
-        }
-
-        if (bio.length > 500) {
-            return res.status(400).json({ message: 'Bio cannot exceed 500 characters' });
-        }
-
-        const user = await User.findById(req.user._id);
-        
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        user.bio = bio;
-        await user.save();
-
-        res.json({
-            bio: user.bio
-        });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
     }
 };
 
@@ -222,14 +149,14 @@ const updateProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const { username, email, bio, currentPassword, newPassword } = req.body;
+        const { username, avatar, currentPassword, newPassword, timerSettings } = req.body;
 
         // Check if username is being changed
         if (username && username !== user.username) {
-            // Check if user has exceeded username changes limit
-            if (user.usernameChanges >= 2) {
+            // Check if user has exceeded username changes limit (now 1)
+            if (user.usernameChanges >= 1) {
                 return res.status(400).json({ 
-                    message: 'Username can only be changed twice'
+                    message: 'Username can only be changed once'
                 });
             }
 
@@ -245,25 +172,16 @@ const updateProfile = async (req, res) => {
             user.usernameChanges += 1;
         }
 
-        // Check if email is being changed
-        if (email && email !== user.email) {
-            const emailExists = await User.findOne({ email });
-            if (emailExists) {
-                return res.status(400).json({ 
-                    message: 'Email is already in use'
-                });
-            }
-            user.email = email;
+        // Update avatar if provided
+        if (avatar && ['fox', 'owl', 'panda', 'penguin', 'koala'].includes(avatar)) {
+            user.avatar = avatar;
         }
 
-        // Update bio if provided
-        if (bio !== undefined) {
-            if (bio.length > 500) {
-                return res.status(400).json({ 
-                    message: 'Bio cannot exceed 500 characters'
-                });
-            }
-            user.bio = bio;
+        // Update timer settings if provided
+        if (timerSettings) {
+            if (timerSettings.pomodoro) user.timerSettings.pomodoro = timerSettings.pomodoro;
+            if (timerSettings.shortBreak) user.timerSettings.shortBreak = timerSettings.shortBreak;
+            if (timerSettings.longBreak) user.timerSettings.longBreak = timerSettings.longBreak;
         }
 
         // Handle password change if provided
@@ -289,14 +207,20 @@ const updateProfile = async (req, res) => {
         // Send response without sensitive information
         res.json({
             username: user.username,
-            email: user.email,
-            bio: user.bio,
-            profilePhoto: user.profilePhoto,
-            usernameChanges: user.usernameChanges
+            avatar: user.avatar,
+            usernameChanges: user.usernameChanges,
+            timerSettings: user.timerSettings
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 };
 
-export { registerUser, loginUser, getDashboard,  getProfile, updateSessionStats, updateProfilePhoto, updateBio, updateProfile};
+export { 
+    registerUser, 
+    loginUser, 
+    getDashboard,
+    getProfile, 
+    updateSessionStats, 
+    updateProfile
+};
