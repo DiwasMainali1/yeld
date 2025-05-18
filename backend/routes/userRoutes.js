@@ -1,8 +1,8 @@
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
+import { googleAuth } from '../controllers/googleAuthController.js';
+
 import { 
-    registerUser, 
-    loginUser, 
     getDashboard, 
     getProfile, 
     updateSessionStats, 
@@ -11,9 +11,7 @@ import {
 
 const router = express.Router();
 
-// Public routes
-router.post('/register', registerUser);
-router.post('/login', loginUser); 
+router.post('/google', googleAuth);
 
 // Protected routes
 router.get('/dashboard', protect, getDashboard);

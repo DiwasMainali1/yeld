@@ -10,13 +10,9 @@ function Home() {
                     </h1>
                 </a>
                 <div className="flex gap-4">
-                    <a href="/register" 
+                    <a href="/login" 
                         className="bg-black text-white py-3 px-8 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25">
-                        Register
-                    </a>
-                    <a href="/login"
-                        className="bg-black text-white py-3 px-8 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25">
-                        Login
+                        Sign In
                     </a>
                 </div>
             </nav>
@@ -52,7 +48,7 @@ function Home() {
                 </div>
 
                 <div className="text-center mt-20">
-                    <a href="/register" 
+                    <a href="/login" 
                         className="bg-black text-white py-4 px-12 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25 text-lg">
                         Get Started
                     </a>

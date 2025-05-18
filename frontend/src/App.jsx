@@ -1,6 +1,5 @@
 import Home from "./components/Home";
-import Login from "./components/Login";
-import Register from "./components/Register";
+import GoogleSignIn from "./components/GoogleSignIn";
 import Dashboard from "./components/Dashboard";
 import Profile from "./components/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -12,8 +11,8 @@ function App() {
       <div className="m-0">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<GoogleSignIn />} />
+          <Route path="/register" element={<GoogleSignIn />} />
           <Route 
             path="/dashboard" 
             element={
