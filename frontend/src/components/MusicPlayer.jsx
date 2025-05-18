@@ -121,27 +121,76 @@ const GhibliAnimation = () => {
     );
   };
 
-  const WindAnimation = () => (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/5"></div>
-      {[...Array(5)].map((_, i) => (
+const WindAnimation = () => (
+  <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/5"></div>
+    
+    {/* Main wind waves - more visible */}
+    {[...Array(3)].map((_, i) => (
+      <div 
+        key={`main-${i}`}
+        className="absolute inset-y-0 right-full w-full h-full animate-wind-wave"
+        style={{
+          background: `linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(125, 211, 252, ${0.08 - i * 0.02}) 45%, 
+            rgba(147, 197, 253, ${0.1 - i * 0.02}) 50%, 
+            rgba(125, 211, 252, ${0.08 - i * 0.02}) 55%, 
+            transparent 100%)`,
+          animationDelay: `${i * 2.5}s`,
+          animationDuration: `${10 + i * 3}s`
+        }}
+      />
+    ))}
+    
+    {/* Subtle secondary waves for depth */}
+    {[...Array(4)].map((_, i) => (
+      <div 
+        key={`secondary-${i}`}
+        className="absolute inset-y-0 right-full w-full h-full animate-wind-wave-alt"
+        style={{
+          background: `linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(186, 230, 253, ${0.05 - i * 0.01}) 48%, 
+            rgba(186, 230, 253, ${0.07 - i * 0.01}) 50%, 
+            rgba(186, 230, 253, ${0.05 - i * 0.01}) 52%, 
+            transparent 100%)`,
+          animationDelay: `${1.5 + i * 2}s`,
+          animationDuration: `${15 + i * 2}s`
+        }}
+      />
+    ))}
+    
+    {/* Wind particles for visual interest */}
+    {[...Array(15)].map((_, i) => {
+      const size = 2 + (i % 3);
+      const startPos = 10 + (i * 5) % 80;
+      const speed = 4 + (i % 4) * 1.5;
+      
+      return (
         <div 
-          key={i}
-          className="absolute inset-y-0 right-full w-full h-full animate-wind-wave"
+          key={`particle-${i}`}
+          className="absolute animate-wind-particle"
           style={{
-            background: `linear-gradient(90deg, transparent 0%, rgba(125, 211, 252, ${0.03 - i * 0.005}) 50%, transparent 100%)`,
-            animationDelay: `${i * 3}s`,
-            animationDuration: `${15 + i * 5}s`
+            width: `${size}px`,
+            height: `${1}px`,
+            top: `${startPos}%`,
+            left: '-10px',
+            backgroundColor: 'rgba(186, 230, 253, 0.5)',
+            animationDelay: `${i * 0.4}s`,
+            animationDuration: `${speed}s`
           }}
         />
-      ))}
-    </div>
-  );
+      );
+    })}
+  </div>
+);
 
-  const AmbientAnimation = () => {
+const AmbientAnimation = () => {
     return (
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-teal-900/20 to-purple-900/5"></div>
+        {/* Stars */}
         <div className="absolute inset-0">
           {Array.from({ length: 30 }, (_, i) => {
             const size = 1 + Math.floor(i % 4) * 0.5;
@@ -162,6 +211,35 @@ const GhibliAnimation = () => {
                   opacity: opacity,
                   animationDuration: `${duration}s`,
                   animationDelay: `${i * 0.2}s`
+                }}
+              />
+            );
+          })}
+        </div>
+        
+        {/* Rain drops */}
+        <div className="absolute inset-0">
+          {Array.from({ length: 40 }, (_, i) => {
+            const width = 1 + (i % 3) * 0.5;
+            const height = 10 + (i % 5) * 3;
+            const x = 2 + (i * 2.4) % 96;
+            const delay = (i * 0.15) % 5;
+            const duration = 0.8 + (i % 4) * 0.3;
+            const opacity = 0.2 + (i % 4) * 0.1;
+            
+            return (
+              <div 
+                key={i}
+                className="absolute bg-blue-100 animate-rain-drop"
+                style={{
+                  width: `${width}px`,
+                  height: `${height}px`,
+                  left: `${x}%`,
+                  top: '-20px',
+                  opacity: opacity,
+                  animationDuration: `${duration}s`,
+                  animationDelay: `${delay}s`,
+                  animationIterationCount: 'infinite'
                 }}
               />
             );
@@ -489,17 +567,39 @@ const MusicPlayer = () => {
                     will-change: transform, opacity;
                 }
                 
-                /* Wind animation */
+                /* Enhanced Wind animations */
                 @keyframes windWave {
                     0% { transform: translateX(0%); }
                     100% { transform: translateX(100%); }
                 }
-                
+
+                @keyframes windWaveAlt {
+                    0% { transform: translateX(-5%); }
+                    100% { transform: translateX(105%); }
+                }
+
+                @keyframes windParticle {
+                    0% { transform: translateX(0) scaleX(1); opacity: 0; }
+                    5% { opacity: 0.7; }
+                    80% { opacity: 0.5; }
+                    100% { transform: translateX(100vw) scaleX(1.5); opacity: 0; }
+                }
+
                 .animate-wind-wave {
-                    animation: windWave 15s linear infinite;
+                    animation: windWave 12s linear infinite;
                     will-change: transform;
                 }
-                
+
+                .animate-wind-wave-alt {
+                    animation: windWaveAlt 15s linear infinite;
+                    will-change: transform;
+                }
+
+                .animate-wind-particle {
+                    animation: windParticle 5s linear infinite;
+                    will-change: transform, opacity;
+                }
+                                
                 /* Ambient stars animation */
                 @keyframes pulseStar {
                     0% { transform: scale(1); opacity: 0.1; }
@@ -509,6 +609,18 @@ const MusicPlayer = () => {
                 
                 .animate-pulse-star {
                     animation: pulseStar 4s ease-in-out infinite;
+                    will-change: transform, opacity;
+                }
+                /* Rain animation */
+                @keyframes rainDrop {
+                    0% { transform: translateY(-10px) translateX(0); opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 0.7; }
+                    100% { transform: translateY(105vh) translateX(-5px); opacity: 0; }
+                }
+
+                .animate-rain-drop {
+                    animation: rainDrop 1s linear infinite;
                     will-change: transform, opacity;
                 }
             `}</style>
