@@ -40,7 +40,7 @@ const MusicAnimations = React.memo(({ isPlaying, currentTrack }) => {
   // Animation Components
   const FocusAnimation = () => (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/5 to-blue-900/5"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 to-blue-900/5"></div>
       {[...Array(3)].map((_, i) => (
         <div 
           key={i}
@@ -69,11 +69,11 @@ const MusicAnimations = React.memo(({ isPlaying, currentTrack }) => {
     
     return (
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/5 to-indigo-900/5"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-indigo-900/5"></div>
         {notePositions.map((pos, i) => (
           <div 
             key={i}
-            className="absolute text-purple-500/50 animate-float-note"
+            className="absolute text-yellow-500/50 animate-float-note"
             style={{
               left: pos.left,
               bottom: '-50px',
@@ -89,7 +89,7 @@ const MusicAnimations = React.memo(({ isPlaying, currentTrack }) => {
     );
   };
 
-  const GhibliAnimation = () => {
+const GhibliAnimation = () => {
     return (
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-pink-700/10 to-blue-600/10"></div>
@@ -108,7 +108,7 @@ const MusicAnimations = React.memo(({ isPlaying, currentTrack }) => {
                 top: '-20px',
                 width: `${size}px`,
                 height: `${size / 2}px`,
-                backgroundColor: '#2f94c6',
+                backgroundColor: '#f752ea',
                 borderRadius: '100% 0',
                 transform: 'rotate(45deg)',
                 animationDelay: `${delay}s`,
@@ -123,7 +123,7 @@ const MusicAnimations = React.memo(({ isPlaying, currentTrack }) => {
 
   const WindAnimation = () => (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/5 to-blue-900/5"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/5"></div>
       {[...Array(5)].map((_, i) => (
         <div 
           key={i}
@@ -141,7 +141,7 @@ const MusicAnimations = React.memo(({ isPlaying, currentTrack }) => {
   const AmbientAnimation = () => {
     return (
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-teal-900/5 to-purple-900/5"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-900/20 to-purple-900/5"></div>
         <div className="absolute inset-0">
           {Array.from({ length: 30 }, (_, i) => {
             const size = 1 + Math.floor(i % 4) * 0.5;
@@ -189,7 +189,7 @@ const CardAnimation = React.memo(({ isPlaying, currentTrack }) => {
   return (
     <div className="absolute inset-0 z-0">
       {currentTrack === 'focus' && (
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/20 to-blue-900/20">
+        <div className="absolute inset-0">
           {[...Array(3)].map((_, i) => (
             <div 
               key={i}
@@ -206,16 +206,16 @@ const CardAnimation = React.memo(({ isPlaying, currentTrack }) => {
         </div>
       )}
       {currentTrack === 'classical' && (
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-indigo-900/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-indigo-900/5"></div>
       )}
       {currentTrack === 'ghibli' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-pink-900/20 to-blue-900/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-900/20 to-blue-900/5"></div>
       )}
       {currentTrack === 'windRises' && (
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/20 to-blue-900/5"></div>
       )}
       {currentTrack === 'ambience' && (
-        <div className="absolute inset-0 bg-gradient-to-b from-teal-900/20 to-purple-900/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-900/20 to-purple-900/5"></div>
       )}
     </div>
   );
@@ -475,16 +475,15 @@ const MusicPlayer = () => {
                     animation: floatNote 15s linear infinite;
                     will-change: transform, opacity;
                 }
-                
                 /* Ghibli petals animation */
                 @keyframes petalFall {
                     0% { transform: translateY(0) rotate(45deg); opacity: 0; }
                     10% { opacity: 0.7; }
-                    40% { transform: translate(20px, 40vh) rotate(90deg); opacity: 0.6; }
-                    70% { transform: translate(0px, 80vh) rotate(180deg); opacity: 0.4; }
-                    100% { transform: translate(-20px, 120vh) rotate(225deg); opacity: 0; }
+                    30% { transform: translate(10px, 30vh) rotate(75deg); opacity: 0.6; }
+                    60% { transform: translate(-5px, 70vh) rotate(135deg); opacity: 0.5; }
+                    100% { transform: translate(8px, 120vh) rotate(180deg); opacity: 0; }
                 }
-                
+
                 .animate-petal-fall {
                     animation: petalFall 20s ease-in-out infinite;
                     will-change: transform, opacity;
