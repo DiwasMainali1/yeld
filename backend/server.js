@@ -13,6 +13,7 @@ import {
     getDashboard, 
     getProfile, 
     updateSessionStats, 
+    updateProfile
 } from './controllers/userController.js';
 
 dotenv.config();
@@ -52,6 +53,9 @@ app.get("/", (req, res) => {
 // Routes
 app.use('/auth', userRoutes);
 app.use('/tasks', taskRoutes);
+
+//Update profile photo
+app.put('/profile/update', protect, updateProfile);
 
 // Protected routes
 app.get('/dashboard', protect, getDashboard);

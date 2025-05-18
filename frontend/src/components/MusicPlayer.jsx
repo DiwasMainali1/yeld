@@ -402,8 +402,8 @@ const MusicPlayer = () => {
                             <button
                                 key={key}
                                 onClick={() => changeTrack(key)}
-                                className={`w-full p-6 text-left border-b border-zinc-800/50 hover:bg-zinc-900 transition-colors duration-200 flex items-start gap-4 ${
-                                    currentTrack === key ? 'bg-zinc-900/70 text-white' : 'text-gray-300'
+                                className={`w-full p-6 text-left border-b border-zinc-800/30 hover:bg-zinc-900 transition-colors duration-200 flex items-start gap-4 ${
+                                    currentTrack === key ? 'bg-zinc-900/30 text-white' : 'text-gray-300'
                                 } last:border-b-0`}
                             >
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
@@ -520,7 +520,7 @@ const MusicPlayer = () => {
                 <CardAnimation isPlaying={isPlaying} currentTrack={currentTrack} />
                 
                 {/* Content with background blur */}
-                <div className="bg-zinc-950/70 backdrop-blur-sm p-8 space-y-6 relative z-10">
+                <div className="bg-zinc-950/30 backdrop-blur-sm p-8 space-y-6 relative z-10">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-4">
                             <Music className="w-8 h-8 text-gray-400" />

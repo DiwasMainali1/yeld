@@ -68,7 +68,7 @@ function Header({ username, isTimerActive}) {
     };
 
     return (
-        <nav className="w-full h-20 border-b border-zinc-800 flex items-center justify-between px-8 bg-black">
+        <nav className="w-full h-20 border-b border-zinc-800 flex items-center justify-between px-8 bg-zinc-950/30">
             <div className="flex items-center gap-8">
                 <button 
                     onClick={() => {
@@ -98,7 +98,7 @@ function Header({ username, isTimerActive}) {
             <div className='flex flex-row gap-4'>
 
                 <button
-                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                     onClick={handleProfile}
                 >
                     <div className="w-5 h-5 rounded-full overflow-hidden">

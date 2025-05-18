@@ -369,9 +369,9 @@ function Dashboard() {
             <MemoizedTaskList />
           </div>
           <div className="lg:col-span-2 order-1 lg:order-2">
-            <div className="bg-zinc-950/80 backdrop-blur-sm p-8 rounded-2xl border border-zinc-900 shadow-xl">
+            <div className="bg-zinc-950/30 backdrop-blur-sm p-8 rounded-2xl border border-zinc-900 shadow-xl">
               <div className="flex justify-center mb-12">
-                <div className="flex gap-4 bg-zinc-900/80 p-1 rounded-lg">
+                <div className="flex gap-4 bg-zinc-900/30 p-1 rounded-lg">
                   <button
                     onClick={() => handleTimerTypeChange('pomodoro')}
                     className={`px-6 py-2 rounded-lg transition-colors ${
@@ -413,7 +413,7 @@ function Dashboard() {
               <div className="flex justify-center gap-6 mb-6">
                 <button
                   onClick={toggleTimer}
-                  className="bg-zinc-900/80 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="bg-zinc-900/30 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
                   {isActive ? (
                     <Pause className="w-8 h-8" />
@@ -423,7 +423,7 @@ function Dashboard() {
                 </button>
                 <button
                   onClick={resetTimer}
-                  className="bg-zinc-900/80 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="bg-zinc-900/30 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
                   <RotateCcw className="w-8 h-8" />
                 </button>
@@ -431,14 +431,14 @@ function Dashboard() {
               <div className="flex justify-center gap-4">
                 <button
                   onClick={handleOpenBackgroundModal}
-                  className="flex items-center gap-2 bg-zinc-900/80 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="flex items-center gap-2 bg-zinc-900/30 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
                   <Image size={20} />
                   Change Background
                 </button>
                 <button
                   onClick={handleOpenEditModal}
-                  className="flex items-center gap-2 bg-zinc-900/80 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="flex items-center gap-2 bg-zinc-900/30 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
                   <Clock size={20} />
                   Edit Times

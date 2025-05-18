@@ -61,7 +61,7 @@ const QuoteSection = () => {
     };
 
     return (
-        <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl mb-4">
+        <div className="bg-zinc-950/30 p-6 rounded-2xl border border-zinc-900 shadow-xl mb-4">
             <div className="flex items-center gap-3 mb-4">
                 <Quote className="w-5 h-5 text-gray-400" />
                 <h3 className="text-gray-200 font-semibold">Daily Motivation</h3>

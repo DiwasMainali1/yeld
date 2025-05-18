@@ -139,14 +139,14 @@ const TaskList = () => {
 
   if (loading) {
     return (
-      <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
+      <div className="bg-zinc-950/30 p-8 rounded-2xl border border-zinc-900 shadow-xl">
         <p className="text-white">Loading tasks...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
+    <div className="bg-zinc-950/30 p-8 rounded-2xl border border-zinc-900 shadow-xl">
       <h3 className="text-white text-xl font-bold mb-4">Task List</h3>
       
       {error && (
