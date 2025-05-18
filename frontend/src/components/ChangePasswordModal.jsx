@@ -83,8 +83,6 @@ const ChangePasswordModal = () => {
                 />
               </div>
             </div>
-
-            {/* Buttons */}
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={handleCloseModal}

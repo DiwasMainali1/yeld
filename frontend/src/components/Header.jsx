@@ -1,57 +1,11 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Settings } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { User, LogOut, Settings } from 'lucide-react';
+import ChangePasswordModal from './ChangePasswordModal';
 
-// Import animal avatar images
-import foxImage from '../assets/fox.png';
-import owlImage from '../assets/owl.png';
-import pandaImage from '../assets/panda.png';
-import penguinImage from '../assets/penguin.png';
-import koalaImage from '../assets/koala.png';
-
-const animalAvatars = {
-  fox: foxImage,
-  owl: owlImage,
-  panda: pandaImage,
-  penguin: penguinImage,
-  koala: koalaImage
-};
-
-function Header({ username, isTimerActive, isOwnProfile, onEditProfile }) {
+function Header({ username, isTimerActive, isOwnProfile, onChangePassword }) {
     const navigate = useNavigate();
     const location = useLocation();
     const isProfilePage = location.pathname.startsWith('/profile/');
-    const [userAvatar, setUserAvatar] = useState('fox'); // Default avatar
-
-    useEffect(() => {
-        // Fetch the user's avatar when component mounts
-        const fetchUserAvatar = async () => {
-            try {
-                const token = localStorage.getItem('userToken');
-                if (!token) return;
-
-                const response = await fetch(`http://localhost:5000/profile/${username}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.avatar && animalAvatars[data.avatar]) {
-                        setUserAvatar(data.avatar);
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching user avatar:', error);
-            }
-        };
-
-        if (username) {
-            fetchUserAvatar();
-        }
-    }, [username]);
 
     const handleLogout = () => {
         if (isTimerActive) {
@@ -87,39 +41,21 @@ function Header({ username, isTimerActive, isOwnProfile, onEditProfile }) {
                         Yeld
                     </h1>
                 </button>
-                <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full overflow-hidden">
-                        <img 
-                            src={animalAvatars[userAvatar]} 
-                            alt={userAvatar} 
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
+                <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-gray-400" />
                     <span className="text-gray-200 font-medium">Welcome back, {username}</span>
                 </div>
             </div>
             <div className='flex flex-row gap-4'>
                 {isProfilePage && isOwnProfile && (
-                    <button
-                        className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                        onClick={onEditProfile}
-                    >
-                        <Settings size={20} />
-                        Edit Profile
-                    </button>
+                    <ChangePasswordModal />
                 )}
 
                 <button
                     className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                     onClick={handleProfile}
                 >
-                    <div className="w-5 h-5 rounded-full overflow-hidden">
-                        <img 
-                            src={animalAvatars[userAvatar]} 
-                            alt={userAvatar} 
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
+                    <User size={20} />
                     Profile
                 </button>
 

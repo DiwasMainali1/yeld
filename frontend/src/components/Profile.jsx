@@ -3,9 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, Trophy, Timer, Calendar } from 'lucide-react';
 import Header from './Header';
 import TaskHistoryModal from './TaskHistoryModal';
-import EditProfileModal from './EditProfileModal';
 
-// Import animal avatar images directly
 import foxImage from '../assets/fox.png';
 import owlImage from '../assets/owl.png';
 import pandaImage from '../assets/panda.png';
@@ -23,7 +21,6 @@ const animalAvatars = [
 const Profile = () => {
     const [showTaskHistory, setShowTaskHistory] = useState(false);
     const [showAvatarSelector, setShowAvatarSelector] = useState(false);
-    const [showEditProfile, setShowEditProfile] = useState(false);
     const { username } = useParams();
     const navigate = useNavigate();
     const [profileData, setProfileData] = useState(null);
@@ -369,16 +366,6 @@ const Profile = () => {
                         </div>
                     </div>
                 </div>
-            )}
-            
-            {/* Edit Profile Modal */}
-            {showEditProfile && (
-                <EditProfileModal
-                    isOpen={showEditProfile}
-                    onClose={() => setShowEditProfile(false)}
-                    profileData={profileData}
-                    onUpdate={handleProfileUpdate}
-                />
             )}
         </div>
     );
