@@ -1,12 +1,35 @@
 import { useState, useEffect, memo } from 'react';
-import { Play, Pause, RotateCcw, Clock } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock, Image } from 'lucide-react';
 import Header from './Header';
 import MusicPlayer from './MusicPlayer';
 import QuoteSection from './QuoteSection';
 import Alarm from '../music/notification.mp3';
 import TaskList from './Tasklist';
+import BackgroundModal from './BackgroundModal';
+import cafeBackground from '../backgrounds/cafe.jpg';
+import fireplaceBackground from '../backgrounds/fireplace.jpg';
+import forestBackground from '../backgrounds/forest.jpg';
+import galaxyBackground from '../backgrounds/galaxy.jpg';
+import ghibliBackground from '../backgrounds/ghibli.jpg';
+import midnightBackground from '../backgrounds/midnight.jpg';
+import oceanBackground from '../backgrounds/ocean.jpg';
+import spiritedBackground from '../backgrounds/spirited.jpg';
+import sunsetBackground from '../backgrounds/sunset.jpg';
 
-// Memoize MusicPlayer to prevent re-renders when Dashboard state changes
+const backgroundMap = {
+  default: null,
+  cafe: cafeBackground,
+  fireplace: fireplaceBackground,
+  forest: forestBackground,
+  galaxy: galaxyBackground,
+  ghibli: ghibliBackground,
+  midnight: midnightBackground,
+  ocean: oceanBackground,
+  spirited: spiritedBackground,
+  sunset: sunsetBackground
+};
+
+// Memoize components to prevent re-renders when Dashboard state changes
 const MemoizedMusicPlayer = memo(MusicPlayer);
 const MemoizedQuoteSection = memo(QuoteSection);
 const MemoizedTaskList = memo(TaskList);
@@ -30,13 +53,48 @@ function Dashboard() {
   const [completedSessions, setCompletedSessions] = useState(0);
   const [audio] = useState(new Audio(Alarm));
 
-  // Modal control
+  // Modal controls
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+  
+  // Background state
+  const [background, setBackground] = useState('default');
 
   // Temporary inputs for editing durations (in minutes)
   const [tempPomodoro, setTempPomodoro] = useState(pomodoroDuration / 60);
   const [tempShortBreak, setTempShortBreak] = useState(shortBreakDuration / 60);
   const [tempLongBreak, setTempLongBreak] = useState(longBreakDuration / 60);
+
+    // Background styles based on selection
+  const renderBackground = () => {
+    if (background === 'default' || !backgroundMap[background]) {
+      return <div className="fixed inset-0 bg-black -z-10"></div>;
+    }
+
+    return (
+      <div className="fixed inset-0 -z-10">
+        <img 
+          src={backgroundMap[background]} 
+          alt={background} 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/50"></div>
+      </div>
+    );
+  };
+
+  // Load saved background from localStorage
+  useEffect(() => {
+    const savedBackground = localStorage.getItem('background');
+    if (savedBackground) {
+      setBackground(savedBackground);
+    }
+  }, []);
+
+  // Save background to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('background', background);
+  }, [background]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -282,153 +340,183 @@ function Dashboard() {
     setShowEditModal(false);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseEditModal = () => {
     setShowEditModal(false);
   };
 
+  // Background selection handlers
+  const handleOpenBackgroundModal = () => {
+    setShowBackgroundModal(true);
+  };
+
+  const handleCloseBackgroundModal = () => {
+    setShowBackgroundModal(false);
+  };
+
+  const handleSelectBackground = (backgroundId) => {
+    setBackground(backgroundId);
+    setShowBackgroundModal(false);
+  };
+
   return (
-    <div className="min-h-screen bg-black font-sans select-none">
-    <Header username={username} isTimerActive={sessionStarted} />
-    
-    <div className="max-w-[1500px] mx-auto px-8 py-12">
+    <div className={`min-h-screen font-sans transition-colors duration-500 select-none`}>
+      {renderBackground()}
+      <Header username={username} isTimerActive={sessionStarted} />
+      
+      <div className="max-w-[1500px] mx-auto px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-1 order-2 lg:order-1">
+          <div className="lg:col-span-1 order-2 lg:order-1">
             <MemoizedTaskList />
-        </div>
-        <div className="lg:col-span-2 order-1 lg:order-2">
-            <div className="bg-zinc-950 p-8 rounded-2xl border border-zinc-900 shadow-xl">
-            <div className="flex justify-center mb-12">
-                <div className="flex gap-4 bg-zinc-900 p-1 rounded-lg">
-                <button
+          </div>
+          <div className="lg:col-span-2 order-1 lg:order-2">
+            <div className="bg-zinc-950/80 backdrop-blur-sm p-8 rounded-2xl border border-zinc-900 shadow-xl">
+              <div className="flex justify-center mb-12">
+                <div className="flex gap-4 bg-zinc-900/80 p-1 rounded-lg">
+                  <button
                     onClick={() => handleTimerTypeChange('pomodoro')}
                     className={`px-6 py-2 rounded-lg transition-colors ${
-                    timerType === 'pomodoro'
+                      timerType === 'pomodoro'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
-                >
+                  >
                     Pomodoro
-                </button>
-                <button
+                  </button>
+                  <button
                     onClick={() => handleTimerTypeChange('shortBreak')}
                     className={`px-6 py-2 rounded-lg transition-colors ${
-                    timerType === 'shortBreak'
+                      timerType === 'shortBreak'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
-                >
+                  >
                     Short Break
-                </button>
-                <button
+                  </button>
+                  <button
                     onClick={() => handleTimerTypeChange('longBreak')}
                     className={`px-6 py-2 rounded-lg transition-colors ${
-                    timerType === 'longBreak'
+                      timerType === 'longBreak'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
-                >
+                  >
                     Long Break
-                </button>
+                  </button>
                 </div>
-            </div>
-            <div className="text-center mb-6">
+              </div>
+              <div className="text-center mb-6">
                 <h2 className="text-8xl font-bold text-white font-mono tracking-widest">
-                {formatTime(time)}
+                  {formatTime(time)}
                 </h2>
-            </div>
+              </div>
 
-            <div className="flex justify-center gap-6 mb-6">
+              <div className="flex justify-center gap-6 mb-6">
                 <button
-                onClick={toggleTimer}
-                className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  onClick={toggleTimer}
+                  className="bg-zinc-900/80 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
-                {isActive ? (
+                  {isActive ? (
                     <Pause className="w-8 h-8" />
-                ) : (
+                  ) : (
                     <Play className="w-8 h-8" />
-                )}
+                  )}
                 </button>
                 <button
-                onClick={resetTimer}
-                className="bg-zinc-900 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  onClick={resetTimer}
+                  className="bg-zinc-900/80 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
-                <RotateCcw className="w-8 h-8" />
+                  <RotateCcw className="w-8 h-8" />
                 </button>
-            </div>
-
-            <div className="flex justify-center">
+              </div>
+              <div className="flex justify-center gap-4">
                 <button
-                    onClick={handleOpenEditModal}
-                    className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  onClick={handleOpenBackgroundModal}
+                  className="flex items-center gap-2 bg-zinc-900/80 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
-                    <Clock size={20} />
-                    Edit Times
+                  <Image size={20} />
+                  Change Background
                 </button>
+                <button
+                  onClick={handleOpenEditModal}
+                  className="flex items-center gap-2 bg-zinc-900/80 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                >
+                  <Clock size={20} />
+                  Edit Times
+                </button>
+              </div>
             </div>
-            </div>
-        </div>
-        <div className="lg:col-span-1 order-3">
-            <div>
-            <MemoizedMusicPlayer />
+          </div>
+          <div className="lg:col-span-1 order-3">
+            <div className="mb-4">
+              <MemoizedMusicPlayer />
             </div>
             <MemoizedQuoteSection />
+          </div>
         </div>
-        </div>
-    </div>
+      </div>
 
-    {showEditModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-        <div className="bg-zinc-900 p-6 rounded-md shadow-lg w-80">
+      {/* Edit Timer Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50">
+          <div className="bg-zinc-900 p-6 rounded-xl shadow-lg w-80">
             <h3 className="text-xl text-white mb-4">Edit Timer Durations</h3>
             <div className="flex flex-col gap-4 mb-4">
-            <div>
+              <div>
                 <label className="block text-white mb-1">Pomodoro (min):</label>
                 <input
-                type="number"
-                min="1"
-                value={tempPomodoro}
-                onChange={(e) => setTempPomodoro(parseInt(e.target.value, 10))}
-                className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                  type="number"
+                  min="1"
+                  value={tempPomodoro}
+                  onChange={(e) => setTempPomodoro(parseInt(e.target.value, 10))}
+                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
                 />
-            </div>
-            <div>
+              </div>
+              <div>
                 <label className="block text-white mb-1">Short Break (min):</label>
                 <input
-                type="number"
-                min="1"
-                value={tempShortBreak}
-                onChange={(e) => setTempShortBreak(parseInt(e.target.value, 10))}
-                className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                  type="number"
+                  min="1"
+                  value={tempShortBreak}
+                  onChange={(e) => setTempShortBreak(parseInt(e.target.value, 10))}
+                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
                 />
-            </div>
-            <div>
+              </div>
+              <div>
                 <label className="block text-white mb-1">Long Break (min):</label>
                 <input
-                type="number"
-                min="1"
-                value={tempLongBreak}
-                onChange={(e) => setTempLongBreak(parseInt(e.target.value, 10))}
-                className="w-full p-2 rounded bg-zinc-800 text-white text-center"
+                  type="number"
+                  min="1"
+                  value={tempLongBreak}
+                  onChange={(e) => setTempLongBreak(parseInt(e.target.value, 10))}
+                  className="w-full p-2 rounded bg-zinc-800 text-white text-center"
                 />
-            </div>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
-            <button
-                onClick={handleCloseModal}
+              <button
+                onClick={handleCloseEditModal}
                 className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition"
-            >
+              >
                 Cancel
-            </button>
-            <button
+              </button>
+              <button
                 onClick={handleSaveTimerSettings}
                 className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-500 transition"
-            >
+              >
                 Save
-            </button>
+              </button>
             </div>
+          </div>
         </div>
-        </div>
-    )}
+      )}
+
+      {/* Background Modal */}
+      <BackgroundModal 
+        isOpen={showBackgroundModal}
+        onClose={handleCloseBackgroundModal}
+        onSelect={handleSelectBackground}
+        currentBackground={background}
+      />
     </div>
   );
 }
