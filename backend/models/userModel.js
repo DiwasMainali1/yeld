@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema({
         pomodoro: { type: Number, default: 50 * 60 },     // 50 minutes
         shortBreak: { type: Number, default: 10 * 60 },   // 10 minutes
         longBreak: { type: Number, default: 60 * 60 }     // 1 hour
+    },
+    background: {
+        type: String,
+        default: 'default'
     }
 }, {
     timestamps: true

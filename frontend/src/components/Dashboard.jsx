@@ -119,37 +119,40 @@ function Dashboard() {
     fetchUser();
   }, []);
 
-  const fetchUserStats = async (currentUsername) => {
-    try {
-      if (!currentUsername) return;
-      const token = localStorage.getItem('userToken');
-      const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch user stats');
+const fetchUserStats = async (currentUsername) => {
+  try {
+    if (!currentUsername) return;
+    const token = localStorage.getItem('userToken');
+    const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-      const data = await response.json();
-      setTotalTimeStudied(data.totalTimeStudied);
-      setCompletedSessions(data.sessionsCompleted || 0);
-
-      // If the user has saved timer settings, apply them
-      if (data.timerSettings) {
-        setPomodoroDuration(data.timerSettings.pomodoro);
-        setShortBreakDuration(data.timerSettings.shortBreak);
-        setLongBreakDuration(data.timerSettings.longBreak);
-
-        // Also update time if not in session
-        if (!sessionStarted && timerType === 'pomodoro') {
-          setTime(data.timerSettings.pomodoro);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch user stats');
     }
-  };
+    const data = await response.json();
+    setTotalTimeStudied(data.totalTimeStudied);
+    setCompletedSessions(data.sessionsCompleted || 0);
+
+    // Set the background from user profile if available
+    if (data.background) {
+      setBackground(data.background);
+    }
+
+    if (data.timerSettings) {
+      setPomodoroDuration(data.timerSettings.pomodoro);
+      setShortBreakDuration(data.timerSettings.shortBreak);
+      setLongBreakDuration(data.timerSettings.longBreak);
+
+      if (!sessionStarted && timerType === 'pomodoro') {
+        setTime(data.timerSettings.pomodoro);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+  }
+};
 
   const updateUserStats = async () => {
     try {
@@ -353,9 +356,29 @@ function Dashboard() {
     setShowBackgroundModal(false);
   };
 
-  const handleSelectBackground = (backgroundId) => {
+
+  const handleSelectBackground = async (backgroundId) => {
     setBackground(backgroundId);
     setShowBackgroundModal(false);
+    
+    try {
+      const token = localStorage.getItem('userToken');
+      const response = await fetch('http://localhost:5000/profile/update', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          background: backgroundId
+        })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save background preference');
+      }
+    } catch (error) {
+      console.error('Error saving background preference:', error);
+    }
   };
 
   return (

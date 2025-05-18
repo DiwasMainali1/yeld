@@ -94,10 +94,10 @@ const getProfile = async (req, res) => {
         const user = await User.findOne({ username: req.params.username });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // No need to slice taskHistory here as we're now managing the limit in the database
         const profile = {
             username: user.username,
             avatar: user.avatar,
+            background: user.background, // Add this line to include background in the response
             sessionsCompleted: user.sessionsCompleted,
             totalTimeStudied: user.totalTimeStudied,
             taskHistory: user.taskHistory,
@@ -197,7 +197,9 @@ const updateProfile = async (req, res) => {
 
             user.password = newPassword;
         }
-
+        if (req.body.background !== undefined) {
+            user.background = req.body.background;
+        }
         await user.save();
 
         // Send response without sensitive information
@@ -205,7 +207,8 @@ const updateProfile = async (req, res) => {
             username: user.username,
             avatar: user.avatar,
             usernameChanges: user.usernameChanges,
-            timerSettings: user.timerSettings
+            timerSettings: user.timerSettings,
+            background: user.background
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
