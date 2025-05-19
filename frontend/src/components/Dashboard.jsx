@@ -36,9 +36,9 @@ const MemoizedTaskList = memo(TaskList);
 
 function Dashboard() {
   // Timer duration states (in seconds)
-  const [pomodoroDuration, setPomodoroDuration] = useState(50 * 60); // default 50 minutes
-  const [shortBreakDuration, setShortBreakDuration] = useState(10 * 60); // default 10 minutes
-  const [longBreakDuration, setLongBreakDuration] = useState(60 * 60); // default 60 minutes
+  const [pomodoroDuration, setPomodoroDuration] = useState(50 * 60); 
+  const [shortBreakDuration, setShortBreakDuration] = useState(10 * 60); 
+  const [longBreakDuration, setLongBreakDuration] = useState(60 * 60); 
 
   // Timer & session states
   const [time, setTime] = useState(pomodoroDuration);
@@ -154,26 +154,32 @@ const fetchUserStats = async (currentUsername) => {
   }
 };
 
-  const updateUserStats = async () => {
-    try {
-      const token = localStorage.getItem('userToken');
-      const response = await fetch('http://localhost:5000/session/complete', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update user stats');
-      }
-      const data = await response.json();
-      setTotalTimeStudied(data.totalTimeStudied);
-      setCompletedSessions((prev) => prev + 1);
-    } catch (error) {
-      console.error('Error updating session stats:', error);
+// Updated updateUserStats function for Dashboard.jsx
+const updateUserStats = async () => {
+  try {
+    const token = localStorage.getItem('userToken');
+    const response = await fetch('http://localhost:5000/session/complete', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        pomodoroDuration: pomodoroDuration
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update user stats');
     }
-  };
+    
+    const data = await response.json();
+    setTotalTimeStudied(data.totalTimeStudied);
+    setCompletedSessions((prev) => prev + 1);
+  } catch (error) {
+    console.error('Error updating session stats:', error);
+  }
+};
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {

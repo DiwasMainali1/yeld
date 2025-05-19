@@ -121,8 +121,14 @@ const updateSessionStats = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        // Get the user's custom pomodoro duration
+        const pomodoroDuration = req.body.pomodoroDuration || user.timerSettings.pomodoro;
+        
+        // Convert seconds to minutes and add to totalTimeStudied
+        const minutesCompleted = Math.floor(pomodoroDuration / 60);
+        
         user.sessionsCompleted += 1;
-        user.totalTimeStudied += 25; // Add 25 minutes for each completed session
+        user.totalTimeStudied += minutesCompleted;
         await user.save();
 
         res.json({
