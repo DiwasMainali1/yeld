@@ -214,6 +214,50 @@ const updateProfile = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
+// @desc    Get leaderboard data
+// @route   GET /leaderboard
+// @access  Private
+const getLeaderboard = async (req, res) => {
+    try {
+        // Get top 10 users sorted by total study time (descending)
+        const topUsers = await User.find({})
+            .select('username totalTimeStudied')
+            .sort({ totalTimeStudied: -1 })
+            .limit(10);
+        
+        // Get total number of users for ranking context
+        const totalUsers = await User.countDocuments();
+        
+        // Find current user's rank
+        const currentUser = await User.findById(req.user._id);
+        
+        if (!currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Get user rank (position in leaderboard)
+        const usersAbove = await User.countDocuments({ 
+            totalTimeStudied: { $gt: currentUser.totalTimeStudied } 
+        });
+        
+        // Rank is users above + 1
+        const currentUserRank = usersAbove + 1;
+        
+        res.json({
+            leaderboard: topUsers,
+            currentUser: {
+                _id: currentUser._id,
+                username: currentUser.username,
+                totalTimeStudied: currentUser.totalTimeStudied,
+                rank: currentUserRank,
+                totalUsers
+            }
+        });
+    } catch (error) {
+        console.error('Leaderboard error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
 export { 
     registerUser, 
@@ -221,5 +265,6 @@ export {
     getDashboard,
     getProfile, 
     updateSessionStats, 
-    updateProfile
+    updateProfile,
+    getLeaderboard  
 };

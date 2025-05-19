@@ -6,7 +6,8 @@ import {
     getDashboard, 
     getProfile, 
     updateSessionStats, 
-    updateProfile 
+    updateProfile,
+    getLeaderboard
 } from '../controllers/userController.js';
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.get('/dashboard', protect, getDashboard);
 router.get('/profile/:username', protect, getProfile);
 router.post('/session/complete', protect, updateSessionStats);
 router.put('/profile/update', protect, updateProfile);
+router.get('/leaderboard', protect, getLeaderboard);
 
 export default router;

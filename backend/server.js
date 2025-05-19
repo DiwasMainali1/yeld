@@ -13,7 +13,8 @@ import {
     getDashboard, 
     getProfile, 
     updateSessionStats, 
-    updateProfile
+    updateProfile,
+    getLeaderboard
 } from './controllers/userController.js';
 
 dotenv.config();
@@ -61,6 +62,7 @@ app.put('/profile/update', protect, updateProfile);
 app.get('/dashboard', protect, getDashboard);
 app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
+app.get('/leaderboard', protect, getLeaderboard);
 
 
 // Global error handling middleware
