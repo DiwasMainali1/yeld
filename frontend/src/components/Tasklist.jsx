@@ -147,7 +147,7 @@ const TaskList = () => {
 
   return (
     <div className="bg-zinc-950/30 p-8 rounded-2xl border border-zinc-900 shadow-xl">
-      <h3 className="text-white text-xl font-bold mb-4">Task List</h3>
+      <h3 className="text-white text-xl font-bold mb-4 flex justify-center">Task List</h3>
       
       {error && (
         <div className="mb-4 p-2 bg-red-900/50 border border-red-800 rounded text-red-200">
@@ -156,14 +156,13 @@ const TaskList = () => {
       )}
 
       <form onSubmit={handleSubmit} className="mb-6">
-        <div className="flex flex-col justify-center items-center space-y-3">
+        <div className="flex flex-col justify-center items-center space-y-4">
           <input
             type="text"
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
             placeholder="Add a new task"
-            className="flex-1 p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white focus:outline-none focus:border-zinc-700"
-          />
+            className="flex-1 p-2 w-52 rounded-xl bg-zinc-900 border border-zinc-800 text-white focus:outline-none focus:border-zinc-700 xlg:w-64" />
           <button
             type="submit"
             disabled={!newTaskText.trim() || tasks.length >= MAX_TASKS}

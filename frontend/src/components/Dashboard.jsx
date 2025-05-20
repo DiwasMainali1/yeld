@@ -1,5 +1,7 @@
+// Dashboard.jsx with improved responsive design
+
 import { useState, useEffect, memo } from 'react';
-import { Play, Pause, RotateCcw, Clock, Image } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock, Image, Menu, X } from 'lucide-react';
 import Header from './Header';
 import MusicPlayer from './MusicPlayer';
 import QuoteSection from './QuoteSection';
@@ -57,6 +59,10 @@ function Dashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
   
+  // Mobile responsive states
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  
   // Background state
   const [background, setBackground] = useState('default');
 
@@ -65,7 +71,22 @@ function Dashboard() {
   const [tempShortBreak, setTempShortBreak] = useState(shortBreakDuration / 60);
   const [tempLongBreak, setTempLongBreak] = useState(longBreakDuration / 60);
 
-    // Background styles based on selection
+  // Track window size for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      if (window.innerWidth > 768) {
+        setShowMobileMenu(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Background styles based on selection
   const renderBackground = () => {
     if (background === 'default' || !backgroundMap[background]) {
       return <div className="fixed inset-0 bg-black -z-10"></div>;
@@ -119,67 +140,66 @@ function Dashboard() {
     fetchUser();
   }, []);
 
-const fetchUserStats = async (currentUsername) => {
-  try {
-    if (!currentUsername) return;
-    const token = localStorage.getItem('userToken');
-    const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+  const fetchUserStats = async (currentUsername) => {
+    try {
+      if (!currentUsername) return;
+      const token = localStorage.getItem('userToken');
+      const response = await fetch(`http://localhost:5000/profile/${currentUsername}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch user stats');
       }
-    });
-    if (!response.ok) {
-      throw new Error('Failed to fetch user stats');
-    }
-    const data = await response.json();
-    setTotalTimeStudied(data.totalTimeStudied);
-    setCompletedSessions(data.sessionsCompleted || 0);
+      const data = await response.json();
+      setTotalTimeStudied(data.totalTimeStudied);
+      setCompletedSessions(data.sessionsCompleted || 0);
 
-    // Set the background from user profile if available
-    if (data.background) {
-      setBackground(data.background);
-    }
-
-    if (data.timerSettings) {
-      setPomodoroDuration(data.timerSettings.pomodoro);
-      setShortBreakDuration(data.timerSettings.shortBreak);
-      setLongBreakDuration(data.timerSettings.longBreak);
-
-      if (!sessionStarted && timerType === 'pomodoro') {
-        setTime(data.timerSettings.pomodoro);
+      // Set the background from user profile if available
+      if (data.background) {
+        setBackground(data.background);
       }
-    }
-  } catch (error) {
-    console.error('Error fetching user stats:', error);
-  }
-};
 
-// Updated updateUserStats function for Dashboard.jsx
-const updateUserStats = async () => {
-  try {
-    const token = localStorage.getItem('userToken');
-    const response = await fetch('http://localhost:5000/session/complete', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        pomodoroDuration: pomodoroDuration
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to update user stats');
+      if (data.timerSettings) {
+        setPomodoroDuration(data.timerSettings.pomodoro);
+        setShortBreakDuration(data.timerSettings.shortBreak);
+        setLongBreakDuration(data.timerSettings.longBreak);
+
+        if (!sessionStarted && timerType === 'pomodoro') {
+          setTime(data.timerSettings.pomodoro);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
     }
-    
-    const data = await response.json();
-    setTotalTimeStudied(data.totalTimeStudied);
-    setCompletedSessions((prev) => prev + 1);
-  } catch (error) {
-    console.error('Error updating session stats:', error);
-  }
-};
+  };
+
+  const updateUserStats = async () => {
+    try {
+      const token = localStorage.getItem('userToken');
+      const response = await fetch('http://localhost:5000/session/complete', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pomodoroDuration: pomodoroDuration
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update user stats');
+      }
+      
+      const data = await response.json();
+      setTotalTimeStudied(data.totalTimeStudied);
+      setCompletedSessions((prev) => prev + 1);
+    } catch (error) {
+      console.error('Error updating session stats:', error);
+    }
+  };
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -362,7 +382,6 @@ const updateUserStats = async () => {
     setShowBackgroundModal(false);
   };
 
-
   const handleSelectBackground = async (backgroundId) => {
     setBackground(backgroundId);
     setShowBackgroundModal(false);
@@ -387,23 +406,71 @@ const updateUserStats = async () => {
     }
   };
 
+  const toggleMobileMenu = () => {
+    setShowMobileMenu(!showMobileMenu);
+  };
+
+  // Determine if mobile layout should be used
+  const isMobile = windowWidth < 768;
+  const isSmallScreen = windowWidth < 1024;
+  const isExtraSmallScreen = windowWidth < 640;
+
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-500 select-none`}>
+    <div className="min-h-screen font-sans transition-colors duration-500 select-none overflow-x-hidden">
       {renderBackground()}
-      <Header username={username} isTimerActive={sessionStarted} />
       
-      <div className="max-w-[1500px] mx-auto px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1 order-2 lg:order-1">
+      {/* Responsive Header */}
+      <div className="relative">
+        <Header 
+          username={username} 
+          isTimerActive={sessionStarted}
+          isMobile={isMobile}
+          onToggleMenu={toggleMobileMenu}
+        />
+        
+        {/* Mobile menu */}
+        {isMobile && showMobileMenu && (
+          <div className="fixed inset-0 bg-black/80 z-40 flex flex-col">
+            <div className="flex justify-end p-4">
+              <button 
+                onClick={toggleMobileMenu}
+                className="text-white p-2"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-4 p-6">
+              {/* Mobile menu content */}
+              <button className="w-full bg-zinc-800 text-white p-4 rounded-xl">
+                Leaderboard
+              </button>
+              <button className="w-full bg-zinc-800 text-white p-4 rounded-xl">
+                Profile
+              </button>
+              <button className="w-full bg-zinc-800 text-white p-4 rounded-xl">
+                Logout
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className={`max-w-[1500px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 md:py-8 lg:py-12`}>
+        <div className={`grid grid-cols-1 ${isSmallScreen ? 'lg:grid-cols-1' : 'lg:grid-cols-4'} gap-4 md:gap-6 lg:gap-8`}>
+          
+          {/* Task List - Responsive position based on screen size */}
+          <div className={`${isSmallScreen ? 'order-2' : 'lg:col-span-1 order-2 lg:order-1'}`}>
             <MemoizedTaskList />
           </div>
-          <div className="lg:col-span-2 order-1 lg:order-2">
-            <div className="bg-zinc-950/30 backdrop-blur-sm p-8 rounded-2xl border border-zinc-900 shadow-xl">
-              <div className="flex justify-center mb-12">
-                <div className="flex gap-4 bg-zinc-900/30 p-1 rounded-lg">
+          
+          {/* Timer Section - Central on all screens */}
+          <div className={`${isSmallScreen ? 'order-1' : 'lg:col-span-2 order-1 lg:order-2'}`}>
+            <div className="bg-zinc-950/30 backdrop-blur-sm p-14 sm:p-6 md:p-8 rounded-2xl border border-zinc-900 shadow-xl">
+              <div className="flex justify-center mb-6 md:mb-12">
+                <div className={`flex gap-2 sm:gap-4 bg-zinc-900/30 p-1 rounded-lg ${isExtraSmallScreen ? 'text-xs' : 'text-sm'}`}>
                   <button
                     onClick={() => handleTimerTypeChange('pomodoro')}
-                    className={`px-6 py-2 rounded-lg transition-colors ${
+                    className={`px-2 sm:px-4 md:px-6 py-2 rounded-lg transition-colors ${
                       timerType === 'pomodoro'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
@@ -413,7 +480,7 @@ const updateUserStats = async () => {
                   </button>
                   <button
                     onClick={() => handleTimerTypeChange('shortBreak')}
-                    className={`px-6 py-2 rounded-lg transition-colors ${
+                    className={`px-2 sm:px-4 md:px-6 py-2 rounded-lg transition-colors ${
                       timerType === 'shortBreak'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
@@ -423,7 +490,7 @@ const updateUserStats = async () => {
                   </button>
                   <button
                     onClick={() => handleTimerTypeChange('longBreak')}
-                    className={`px-6 py-2 rounded-lg transition-colors ${
+                    className={`px-2 sm:px-4 md:px-6 py-2 rounded-lg transition-colors ${
                       timerType === 'longBreak'
                         ? 'bg-zinc-800 text-white'
                         : 'text-gray-400 hover:text-white'
@@ -433,62 +500,75 @@ const updateUserStats = async () => {
                   </button>
                 </div>
               </div>
-              <div className="text-center mb-6">
-                <h2 className="text-8xl font-bold text-white font-mono tracking-widest">
+              
+              {/* Responsive timer display */}
+              <div className="text-center mb-4 md:mb-6">
+                <h2 className={`font-mono tracking-widest text-white ${
+                  isExtraSmallScreen ? 'text-5xl' : windowWidth < 1080 ? 'text-6xl' : 'text-8xl'
+                } font-bold`}>
                   {formatTime(time)}
                 </h2>
               </div>
 
-              <div className="flex justify-center gap-6 mb-6">
+              {/* Timer controls */}
+              <div className="flex justify-center gap-4 md:gap-6 mb-4 md:mb-6">
                 <button
                   onClick={toggleTimer}
-                  className="bg-zinc-900/30 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="bg-zinc-900/30 text-white p-4 md:p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
                   {isActive ? (
-                    <Pause className="w-8 h-8" />
+                    <Pause className={`${isExtraSmallScreen ? 'w-6 h-6' : 'w-8 h-8'}`} />
                   ) : (
-                    <Play className="w-8 h-8" />
+                    <Play className={`${isExtraSmallScreen ? 'w-6 h-6' : 'w-8 h-8'}`} />
                   )}
                 </button>
                 <button
                   onClick={resetTimer}
-                  className="bg-zinc-900/30 text-white p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="bg-zinc-900/30 text-white p-4 md:p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
-                  <RotateCcw className="w-8 h-8" />
+                  <RotateCcw className={`${isExtraSmallScreen ? 'w-6 h-6' : 'w-8 h-8'}`} />
                 </button>
               </div>
-              <div className="flex justify-center gap-4">
+              
+              {/* Buttons with responsive sizing */}
+              <div className="flex justify-center gap-2 sm:gap-4">
                 <button
                   onClick={handleOpenBackgroundModal}
-                  className="flex items-center gap-2 bg-zinc-900/30 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className={`flex items-center gap-2 bg-zinc-900/30 text-white py-1 px-2 sm:py-2 sm:px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25 ${
+                    isExtraSmallScreen ? 'text-xs' : 'text-sm'
+                  }`}
                 >
-                  <Image size={20} />
-                  Change Background
+                  <Image size={isExtraSmallScreen ? 16 : 20} />
+                  <span className={`${isExtraSmallScreen ? 'hidden' : 'inline'}`}>Change Background</span>
                 </button>
                 <button
                   onClick={handleOpenEditModal}
-                  className="flex items-center gap-2 bg-zinc-900/30 text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className={`flex items-center gap-2 bg-zinc-900/30 text-white py-1 px-2 sm:py-2 sm:px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25 ${
+                    isExtraSmallScreen ? 'text-xs' : 'text-sm'
+                  }`}
                 >
-                  <Clock size={20} />
-                  Edit Times
+                  <Clock size={isExtraSmallScreen ? 16 : 20} />
+                  <span className={`${isExtraSmallScreen ? 'hidden' : 'inline'}`}>Edit Times</span>
                 </button>
               </div>
             </div>
           </div>
-          <div className="lg:col-span-1 order-3">
+          
+          {/* Music and Quote Section - Responsive position */}
+          <div className={`${isSmallScreen ? 'order-3' : 'lg:col-span-1 order-3'}`}>
             <div className="mb-4">
-              <MemoizedMusicPlayer />
+              <MemoizedMusicPlayer isSmallScreen={isExtraSmallScreen} />
             </div>
-            <MemoizedQuoteSection />
+            <MemoizedQuoteSection isSmallScreen={isExtraSmallScreen} />
           </div>
         </div>
       </div>
 
-      {/* Edit Timer Modal */}
+      {/* Edit Timer Modal - Responsive sizing */}
       {showEditModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50">
-          <div className="bg-zinc-900 p-6 rounded-xl shadow-lg w-80">
-            <h3 className="text-xl text-white mb-4">Edit Timer Durations</h3>
+          <div className={`bg-zinc-900 p-4 sm:p-6 rounded-xl shadow-lg ${isExtraSmallScreen ? 'w-11/12' : 'w-80'}`}>
+            <h3 className="text-lg sm:text-xl text-white mb-4">Edit Timer Durations</h3>
             <div className="flex flex-col gap-4 mb-4">
               <div>
                 <label className="block text-white mb-1">Pomodoro (min):</label>
@@ -524,13 +604,13 @@ const updateUserStats = async () => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={handleCloseEditModal}
-                className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition"
+                className="px-3 sm:px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveTimerSettings}
-                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-500 transition"
+                className="px-3 sm:px-4 py-2 rounded bg-green-600 text-white hover:bg-green-500 transition"
               >
                 Save
               </button>
@@ -545,6 +625,7 @@ const updateUserStats = async () => {
         onClose={handleCloseBackgroundModal}
         onSelect={handleSelectBackground}
         currentBackground={background}
+        isSmallScreen={isExtraSmallScreen}
       />
     </div>
   );

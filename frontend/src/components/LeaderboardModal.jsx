@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trophy, Clock, Medal, Loader2 } from 'lucide-react';
+import { X, Trophy, Clock, Medal, Loader2, User as UserIcon } from 'lucide-react';
+
+// Import animal avatar images
+import foxImage from '../assets/fox.png';
+import owlImage from '../assets/owl.png';
+import pandaImage from '../assets/panda.png';
+import penguinImage from '../assets/penguin.png';
+import koalaImage from '../assets/koala.png';
+
+const animalAvatars = {
+  fox: foxImage,
+  owl: owlImage,
+  panda: pandaImage,
+  penguin: penguinImage,
+  koala: koalaImage
+};
 
 const LeaderboardModal = ({ isOpen, onClose }) => {
     const [leaderboard, setLeaderboard] = useState([]);
@@ -74,6 +89,28 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
         }
     };
 
+    // Function to render user avatar
+    const UserAvatar = ({ avatar }) => {
+        if (avatar && animalAvatars[avatar]) {
+            return (
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
+                    <img 
+                        src={animalAvatars[avatar]} 
+                        alt={avatar} 
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+            );
+        }
+        
+        // Default avatar if none is specified
+        return (
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
+                <UserIcon className="w-4 h-4 text-gray-400" />
+            </div>
+        );
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose}></div>
@@ -130,8 +167,9 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
                                     <div className="col-span-1">
                                         <RankingIcon rank={index + 1} />
                                     </div>
-                                    <div className="col-span-7 font-medium text-gray-200">
-                                        {user.username}
+                                    <div className="col-span-7 font-medium text-gray-200 flex items-center gap-3">
+                                        <UserAvatar avatar={user.avatar} />
+                                        <span>{user.username}</span>
                                     </div>
                                     <div className="col-span-4 text-right flex items-center justify-end gap-2">
                                         <Clock className="w-4 h-4 text-gray-400" />
@@ -149,20 +187,15 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
                 {currentUser && !loading && !error && (
                     <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-gray-400">Your Position:</div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-sm text-gray-400">Your Position:</div>
+                                <UserAvatar avatar={currentUser.avatar} />
+                            </div>
                             <div className="text-gray-300">
                                 <span className="font-semibold">{currentUser.rank}</span> 
                                 <span className="text-gray-500 mx-1">of</span> 
                                 <span>{currentUser.totalUsers}</span>
                             </div>
-                        </div>
-                        <div className="mt-2 w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                                className="bg-gradient-to-r from-blue-500 via-purple-500 to-rose-500 h-full"
-                                style={{ 
-                                    width: `${Math.max(1, Math.min(100, (currentUser.rank / currentUser.totalUsers) * 100))}%` 
-                                }}
-                            ></div>
                         </div>
                     </div>
                 )}

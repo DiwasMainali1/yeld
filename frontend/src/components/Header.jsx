@@ -1,5 +1,7 @@
+// Updated Header.jsx with responsive design
+
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trophy, User } from 'lucide-react';
+import { LogOut, Trophy, User, Menu } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import LeaderboardModal from './LeaderboardModal';
 
@@ -18,10 +20,22 @@ const animalAvatars = {
   koala: koalaImage
 };
 
-function Header({ username, isTimerActive }) {
+function Header({ username, isTimerActive, isMobile, onToggleMenu }) {
     const navigate = useNavigate();
     const [userAvatar, setUserAvatar] = useState('fox');
     const [showLeaderboard, setShowLeaderboard] = useState(false);
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
 
     useEffect(() => {
         const fetchUserAvatar = async () => {
@@ -73,10 +87,24 @@ function Header({ username, isTimerActive }) {
         setShowLeaderboard(!showLeaderboard);
     };
 
+    // Responsive sizing classes
+    const isExtraSmallScreen = windowWidth < 640;
+    const buttonClasses = `flex items-center gap-2 bg-black text-white py-1 sm:py-2 px-2 sm:px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25 ${isExtraSmallScreen ? 'text-xs' : 'text-sm'}`;
+    const iconSize = isExtraSmallScreen ? 16 : 20;
+
     return (
         <>
-            <nav className="w-full h-20 border-b border-zinc-800 flex items-center justify-between px-8 bg-zinc-950/30">
-                <div className="flex items-center gap-8">
+            <nav className="w-full h-16 sm:h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-2 sm:px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm">
+                <div className="flex items-center gap-2 sm:gap-4 md:gap-8">
+                    {isMobile && (
+                        <button 
+                            onClick={onToggleMenu}
+                            className="mr-2 text-white"
+                        >
+                            <Menu className="w-6 h-6" />
+                        </button>
+                    )}
+                    
                     <button 
                         onClick={() => {
                             if (isTimerActive) {
@@ -87,57 +115,64 @@ function Header({ username, isTimerActive }) {
                         }}
                         className="hover:scale-105 transition-transform"
                     >
-                        <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-4xl font-bold tracking-tight">
+                        <h1 className="ml-2 px-2 bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
                             Yeld
                         </h1>
                     </button>
-                    <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full overflow-hidden">
-                            <img 
-                                src={animalAvatars[userAvatar]} 
-                                alt={userAvatar} 
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <span className="text-gray-200 font-medium">Welcome back, {username}</span>
-                    </div>
-                </div>
-                <div className='flex flex-row gap-4'>
-                    <button
-                        className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                        onClick={toggleLeaderboard}
-                    >
-                        <Trophy className="w-5 h-5 text-gray-300" />
-                        Leaderboard
-                    </button>
-                    <button
-                        className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                        onClick={handleProfile}
-                    >
-                        <div className="w-5 h-5 rounded-full overflow-hidden">
-                            <img 
-                                src={animalAvatars[userAvatar]} 
-                                alt={userAvatar} 
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        Profile
-                    </button>
 
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        Logout
-                    </button>
+                    {!isExtraSmallScreen && (
+                        <div className="flex items-center gap-3">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden">
+                                <img 
+                                    src={animalAvatars[userAvatar]} 
+                                    alt={userAvatar} 
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <span className="text-gray-200 text-xs sm:text-sm md:font-medium">Welcome back, {username}</span>
+                        </div>
+                    )}
                 </div>
+                
+                {!isMobile && (
+                    <div className='flex flex-row gap-2 sm:gap-4'>
+                        <button
+                            className={buttonClasses}
+                            onClick={toggleLeaderboard}
+                        >
+                            <Trophy className={`w-${iconSize/4} h-${iconSize/4} text-gray-300`} />
+                            {!isExtraSmallScreen && "Leaderboard"}
+                        </button>
+                        <button
+                            className={buttonClasses}
+                            onClick={handleProfile}
+                        >
+                            <div className={`w-${iconSize/4} h-${iconSize/4} rounded-full overflow-hidden`}>
+                                <img 
+                                    src={animalAvatars[userAvatar]} 
+                                    alt={userAvatar} 
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            {!isExtraSmallScreen && "Profile"}
+                        </button>
+
+                        <button
+                            onClick={handleLogout}
+                            className={buttonClasses}
+                        >
+                            <LogOut className={`w-${iconSize/5} h-${iconSize/5}`} />
+                            {!isExtraSmallScreen && "Logout"}
+                        </button>
+                    </div>
+                )}
             </nav>
 
             {/* Leaderboard Modal */}
             <LeaderboardModal 
                 isOpen={showLeaderboard} 
                 onClose={() => setShowLeaderboard(false)} 
+                isSmallScreen={isExtraSmallScreen}
             />
         </>
     );

@@ -163,7 +163,7 @@ const WindAnimation = () => (
     
     {/* Wind particles for visual interest */}
     {[...Array(15)].map((_, i) => {
-      const size = 2 + (i % 3);
+      const size = 3 + (i % 3);
       const startPos = 10 + (i * 5) % 80;
       const speed = 4 + (i % 4) * 1.5;
       
@@ -634,17 +634,17 @@ const MusicPlayer = () => {
                 <div className="bg-zinc-950/30 backdrop-blur-sm p-8 space-y-6 relative z-10">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-4">
-                            <Music className="w-8 h-8 text-gray-400" />
+                            <Music className="w-4 text-gray-400 xlg:w-8" />
                             <div className="relative"> {/* Track selection with modal trigger */}
                                 <div 
                                     className="cursor-pointer group" 
                                     onClick={() => setShowModal(true)}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-gray-200 text-xl font-semibold group-hover:text-white transition-colors">
+                                        <h3 className="text-gray-200 text-md font-semibold group-hover:text-white transition-colors xlg:text-xl">
                                             {tracks[currentTrack].title}
                                         </h3>
-                                        <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                                        <ChevronDown className="w-3 text-gray-400 group-hover:text-white transition-colors xlg:w-5" />
                                     </div>
                                     <p className="text-gray-500">{tracks[currentTrack].subtitle}</p>
                                 </div>
@@ -653,7 +653,7 @@ const MusicPlayer = () => {
                         
                         <button
                             onClick={togglePlay}
-                            className="bg-black text-white p-4 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                            className="bg-black text-white p-3 rounded-full hover:bg-zinc-900 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                         >
                             {isPlaying ? 
                                 <Pause className="w-6 h-6" /> : 

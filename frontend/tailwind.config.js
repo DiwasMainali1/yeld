@@ -11,6 +11,10 @@ export default {
             inter: ['Inter', 'sans-serif'],
         },
     },
+    screens: {
+      xlg: '1500px',
+      lg: '1050px'
+    }
   },
   plugins: [],
 }

@@ -226,8 +226,9 @@ const updateProfile = async (req, res) => {
 const getLeaderboard = async (req, res) => {
     try {
         // Get top 10 users sorted by total study time (descending)
+        // Now including avatar information
         const topUsers = await User.find({})
-            .select('username totalTimeStudied')
+            .select('username totalTimeStudied avatar')
             .sort({ totalTimeStudied: -1 })
             .limit(10);
         
@@ -255,6 +256,7 @@ const getLeaderboard = async (req, res) => {
                 _id: currentUser._id,
                 username: currentUser.username,
                 totalTimeStudied: currentUser.totalTimeStudied,
+                avatar: currentUser.avatar,
                 rank: currentUserRank,
                 totalUsers
             }
