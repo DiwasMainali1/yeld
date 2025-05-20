@@ -4,9 +4,8 @@ import focusAudio from '../music/focus-music.mp3';
 import classicalAudio from '../music/classical-music.mp3';
 import ghibliAudio from '../music/ghibli-music.mp3';
 import windRisesAudio from '../music/wind-rises.mp3';
-import ambienceAudio from '../music/ambient-music.mp3'; // Added a 5th track
+import ambienceAudio from '../music/ambient-music.mp3'; 
 
-// Create a separate memoized volume control component
 const VolumeControl = React.memo(({ volume, onVolumeChange }) => {
   const handleChange = (e) => {
     onVolumeChange(parseFloat(e.target.value));

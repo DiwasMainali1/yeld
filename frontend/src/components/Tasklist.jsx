@@ -162,7 +162,7 @@ const TaskList = () => {
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
             placeholder="Add a new task"
-            className="flex-1 p-2 w-52 rounded-xl bg-zinc-900 border border-zinc-800 text-white focus:outline-none focus:border-zinc-700 xlg:w-64" />
+            className="flex-1 p-2 w-48 rounded-xl bg-zinc-900 border border-zinc-800 text-white focus:outline-none focus:border-zinc-700 xlg:w-64" />
           <button
             type="submit"
             disabled={!newTaskText.trim() || tasks.length >= MAX_TASKS}
