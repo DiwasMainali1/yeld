@@ -461,10 +461,10 @@ const MusicPlayer = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay">
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
                 <div 
-                    className="relative bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                    className="relative bg-zinc-950 border border-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+                    <div className="flex items-center justify-between p-6 border-b border-gray-800">
                         <h3 className="text-xl font-semibold text-white">Select Music</h3>
                         <button 
                             onClick={() => setShowModal(false)}
@@ -625,7 +625,7 @@ const MusicPlayer = () => {
             `}</style>
     
             {/* Main player UI with card-specific animation */}
-            <div className="rounded-2xl border border-zinc-900 shadow-xl relative overflow-hidden">
+            <div className="rounded-2xl border border-gray-800 shadow-xl relative overflow-hidden">
                 {/* Card-specific animation */}
                 <CardAnimation isPlaying={isPlaying} currentTrack={currentTrack} />
                 

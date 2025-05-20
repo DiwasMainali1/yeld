@@ -139,14 +139,14 @@ const TaskList = () => {
 
   if (loading) {
     return (
-      <div className="bg-zinc-950/30 p-8 rounded-2xl border border-zinc-900 shadow-xl">
+      <div className="bg-zinc-950/30 p-8 rounded-2xl border border-gray-800 shadow-xl">
         <p className="text-white">Loading tasks...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-950/30 p-8 rounded-2xl border border-zinc-900 shadow-xl">
+    <div className="bg-zinc-950/30 p-8 rounded-2xl border border-gray-800 shadow-xl">
       <h3 className="text-white text-xl font-bold mb-4 flex justify-center">Task List</h3>
       
       {error && (
@@ -166,7 +166,7 @@ const TaskList = () => {
           <button
             type="submit"
             disabled={!newTaskText.trim() || tasks.length >= MAX_TASKS}
-            className="bg-zinc-800 text-white px-4 py-2 rounded-xl hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-zinc-800 border border-gray-600 text-white px-4 py-2 rounded-xl hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Add
           </button>

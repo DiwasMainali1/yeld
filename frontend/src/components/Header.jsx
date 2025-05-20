@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trophy, User, Menu, X, Home } from 'lucide-react';
+import { LogOut, Trophy, Menu, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import LeaderboardModal from './LeaderboardModal';
 
@@ -18,16 +18,17 @@ const animalAvatars = {
   koala: koalaImage
 };
 
-function Header({ username, isTimerActive, isMobile }) {
+function Header({ username, isTimerActive }) {
     const navigate = useNavigate();
     const [userAvatar, setUserAvatar] = useState('fox');
     const [showLeaderboard, setShowLeaderboard] = useState(false);
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+    // Handle window resize
     useEffect(() => {
         const handleResize = () => {
-            setWindowWidth(window.innerWidth);
+            setIsMobile(window.innerWidth < 768);
         };
         
         window.addEventListener('resize', handleResize);
@@ -36,6 +37,7 @@ function Header({ username, isTimerActive, isMobile }) {
         };
     }, []);
 
+    // Fetch user avatar from API
     useEffect(() => {
         const fetchUserAvatar = async () => {
             try {
@@ -84,11 +86,6 @@ function Header({ username, isTimerActive, isMobile }) {
         navigate(`/profile/${username}`);
     };
 
-    const toggleLeaderboard = () => {
-        setMobileMenuOpen(false);
-        setShowLeaderboard(!showLeaderboard);
-    };
-
     const handleDashboard = () => {
         if (isTimerActive) {
             const confirmed = window.confirm('You have an active session. Are you sure you want to leave this page?');
@@ -98,25 +95,24 @@ function Header({ username, isTimerActive, isMobile }) {
         navigate('/dashboard');
     };
 
-    const toggleMobileMenu = () => {
-        setMobileMenuOpen(!mobileMenuOpen);
-        // We're no longer calling the external onToggleMenu
-        // as we're handling the menu entirely within this component
+    const toggleLeaderboard = () => {
+        setMobileMenuOpen(false);
+        setShowLeaderboard(!showLeaderboard);
     };
 
-    // Responsive sizing classes
-    const isExtraSmallScreen = windowWidth < 640;
-    const buttonClasses = `flex items-center gap-2 bg-black text-white py-1 sm:py-2 px-2 sm:px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25 ${isExtraSmallScreen ? 'text-xs' : 'text-sm'}`;
-    const iconSize = isExtraSmallScreen ? 16 : 20;
+    const toggleMobileMenu = () => {
+        setMobileMenuOpen(!mobileMenuOpen);
+    };
 
     return (
         <>
-            <nav className="w-full h-16 sm:h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-2 sm:px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm">
-                <div className="ml-2 flex items-center gap-2 sm:gap-4 md:gap-8">
+            <nav className="w-full h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm">
+                <div className="flex items-center gap-4">
                     {isMobile && (
                         <button 
                             onClick={toggleMobileMenu}
-                            className="mr-2 text-white"
+                            className="text-white"
+                            aria-label="Toggle mobile menu"
                         >
                             <Menu className="w-6 h-6" />
                         </button>
@@ -126,54 +122,53 @@ function Header({ username, isTimerActive, isMobile }) {
                         onClick={handleDashboard}
                         className="hover:scale-105 transition-transform"
                     >
-                        <h1 className="ml-1 px-2 bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                        <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-3xl md:text-4xl font-bold tracking-tight">
                             Yeld
                         </h1>
                     </button>
 
-                    {!isExtraSmallScreen && (
+                    {!isMobile && (
                         <div className="flex items-center gap-3">
-                            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden">
+                            <div className="w-6 h-6 rounded-full overflow-hidden">
                                 <img 
                                     src={animalAvatars[userAvatar]} 
                                     alt={userAvatar} 
                                     className="w-full h-full object-cover"
                                 />
                             </div>
-                            <span className="text-gray-200 text-xs sm:text-sm md:font-medium">Welcome back, {username}</span>
+                            <span className="text-gray-200 font-medium">Welcome back, {username}</span>
                         </div>
                     )}
                 </div>
                 
                 {!isMobile && (
-                    <div className='flex flex-row gap-2 sm:gap-4'>
+                    <div className="flex flex-row gap-4">
                         <button
-                            className={buttonClasses}
+                            className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                             onClick={toggleLeaderboard}
                         >
-                            <Trophy className={`w-${iconSize/4} h-${iconSize/4} text-gray-300`} />
-                            {!isExtraSmallScreen && "Leaderboard"}
+                            <Trophy className="w-5 h-5 text-gray-300" />
+                            Leaderboard
                         </button>
                         <button
-                            className={buttonClasses}
+                            className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                             onClick={handleProfile}
                         >
-                            <div className={`w-${iconSize/4} h-${iconSize/4} rounded-full overflow-hidden`}>
+                            <div className="w-5 h-5 rounded-full overflow-hidden">
                                 <img 
                                     src={animalAvatars[userAvatar]} 
                                     alt={userAvatar} 
                                     className="w-full h-full object-cover"
                                 />
                             </div>
-                            {!isExtraSmallScreen && "Profile"}
+                            Profile
                         </button>
-
                         <button
                             onClick={handleLogout}
-                            className={buttonClasses}
+                            className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                         >
-                            <LogOut className={`w-${iconSize/5} h-${iconSize/5}`} />
-                            {!isExtraSmallScreen && "Logout"}
+                            <LogOut className="w-4 h-4" />
+                            Logout
                         </button>
                     </div>
                 )}
@@ -182,7 +177,7 @@ function Header({ username, isTimerActive, isMobile }) {
             {/* Mobile Menu */}
             {isMobile && mobileMenuOpen && (
                 <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-sm">
-                    <div className="fixed inset-y-0 right-0 w-3/4 max-w-sm bg-zinc-900 border-l border-zinc-800 flex flex-col">
+                    <div className="fixed inset-y-0 right-0 w-4/5 max-w-sm bg-zinc-900 border-l border-zinc-800 flex flex-col">
                         <div className="flex justify-between items-center p-4 border-b border-zinc-800">
                             <div className="flex items-center gap-3">
                                 <div className="w-6 h-6 rounded-full overflow-hidden">
@@ -197,11 +192,22 @@ function Header({ username, isTimerActive, isMobile }) {
                             <button 
                                 onClick={toggleMobileMenu}
                                 className="text-white"
+                                aria-label="Close menu"
                             >
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
                         <div className="flex flex-col gap-2 p-4">
+                            <button
+                                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl bg-zinc-800 text-white font-medium hover:bg-zinc-700 transition duration-300"
+                                onClick={handleDashboard}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                                Dashboard
+                            </button>
                             <button
                                 className="flex items-center gap-3 w-full py-3 px-4 rounded-xl bg-zinc-800 text-white font-medium hover:bg-zinc-700 transition duration-300"
                                 onClick={toggleLeaderboard}
@@ -213,7 +219,10 @@ function Header({ username, isTimerActive, isMobile }) {
                                 className="flex items-center gap-3 w-full py-3 px-4 rounded-xl bg-zinc-800 text-white font-medium hover:bg-zinc-700 transition duration-300"
                                 onClick={handleProfile}
                             >
-                                <User className="w-5 h-5" />
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
                                 Profile
                             </button>
                             <button
@@ -232,7 +241,6 @@ function Header({ username, isTimerActive, isMobile }) {
             <LeaderboardModal 
                 isOpen={showLeaderboard} 
                 onClose={() => setShowLeaderboard(false)} 
-                isSmallScreen={isExtraSmallScreen}
             />
         </>
     );

@@ -465,9 +465,9 @@ function Dashboard() {
           
           {/* Timer Section - Central on all screens */}
           <div className={`${isSmallScreen ? 'order-1' : 'lg:col-span-2 order-1 lg:order-2'}`}>
-            <div className="bg-zinc-950/30 backdrop-blur-sm p-14 sm:p-6 md:p-8 rounded-2xl border border-zinc-900 shadow-xl">
+            <div className="bg-zinc-950/30 backdrop-blur-sm p-14 sm:p-6 md:p-8 rounded-2xl border border-gray-800 shadow-xl">
               <div className="flex justify-center mb-6 md:mb-12">
-                <div className={`flex gap-2 sm:gap-4 bg-zinc-900/30 p-1 rounded-lg ${isExtraSmallScreen ? 'text-xs' : 'text-sm'}`}>
+                <div className={`flex gap-2 sm:gap-4 bg-zinc-900/30 border border-gray-800 p-1 rounded-lg ${isExtraSmallScreen ? 'text-xs' : 'text-sm'}`}>
                   <button
                     onClick={() => handleTimerTypeChange('pomodoro')}
                     className={`px-2 sm:px-4 md:px-6 py-2 rounded-lg transition-colors ${
@@ -514,7 +514,7 @@ function Dashboard() {
               <div className="flex justify-center gap-4 md:gap-6 mb-4 md:mb-6">
                 <button
                   onClick={toggleTimer}
-                  className="bg-zinc-900/30 text-white p-4 md:p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="bg-zinc-900/30 text-white p-4 md:p-6 rounded-full hover:bg-zinc-800 border border-gray-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
                   {isActive ? (
                     <Pause className={`${isExtraSmallScreen ? 'w-6 h-6' : 'w-8 h-8'}`} />
@@ -524,7 +524,7 @@ function Dashboard() {
                 </button>
                 <button
                   onClick={resetTimer}
-                  className="bg-zinc-900/30 text-white p-4 md:p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
+                  className="bg-zinc-900/30 text-white p-4 md:p-6 rounded-full hover:bg-zinc-800 border border-gray-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                 >
                   <RotateCcw className={`${isExtraSmallScreen ? 'w-6 h-6' : 'w-8 h-8'}`} />
                 </button>
