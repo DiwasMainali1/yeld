@@ -57,30 +57,39 @@ sessionSchema.methods.isFull = function() {
   return this.participants.length >= 10;
 };
 
-// Add method to add a participant
 sessionSchema.methods.addParticipant = function(userId) {
-  if (this.isFull()) {
-    throw new Error('Session is full');
-  }
-  
-  // Check if user is already in the session
-  if (this.participants.includes(userId) || this.creator.equals(userId)) {
+  // Check if session is full
+  if (this.participants.length >= 10) {
     return false;
   }
   
-  this.participants.push(userId);
-  return true;
+  // Check if user is already in participants list
+  const isAlreadyParticipant = this.participants.some(id => id.equals(userId));
+  
+  // Check if user is the creator
+  const isCreator = this.creator.equals(userId);
+  
+  // Only add if not already a participant and not the creator
+  if (!isAlreadyParticipant && !isCreator) {
+    this.participants.push(userId);
+    return true;
+  }
+  
+  return false;
 };
 
 // Add method to remove a participant
 sessionSchema.methods.removeParticipant = function(userId) {
-  const initialLength = this.participants.length;
-  this.participants = this.participants.filter(id => !id.equals(userId));
-  
-  // If creator is leaving, delete the session
+  // Check if user is the creator
   if (this.creator.equals(userId)) {
-    return 'delete';
+    return 'delete'; // Signal that session should be deleted
   }
+  
+  // Check if user is in participants list
+  const initialLength = this.participants.length;
+  
+  // Filter out the participant
+  this.participants = this.participants.filter(id => !id.equals(userId));
   
   // Return true if participant was removed
   return this.participants.length < initialLength;

@@ -96,6 +96,7 @@ export const checkSession = async (req, res) => {
 // @desc    Join an existing session
 // @route   POST /sessions/:id/join
 // @access  Private
+// Update the joinSession function to include complete participant information
 export const joinSession = async (req, res) => {
   try {
     const session = await Session.findById(req.params.id);
@@ -123,37 +124,70 @@ export const joinSession = async (req, res) => {
       return res.status(400).json({ message: 'You are already in another session' });
     }
     
+    // Get creator information
+    const creator = await User.findById(session.creator);
+    const creatorUsername = creator ? creator.username : 'Unknown User';
+    
+    // Get participant information
+    let participantUsernames = {};
+    
+    if (session.participants && session.participants.length > 0) {
+      const users = await User.find({
+        _id: { $in: session.participants }
+      }).select('_id username');
+      
+      users.forEach(user => {
+        participantUsernames[user._id.toString()] = user.username;
+      });
+    }
+    
     // If user is the creator, just return the session
     if (session.creator.equals(req.user._id)) {
       return res.json({
         _id: session._id,
         creator: session.creator,
+        creatorUsername,
         participants: session.participants,
+        participantUsernames,
         duration: session.duration,
         isActive: session.isActive,
-        startTime: session.startTime
+        startTime: session.startTime,
+        expiresAt: session.expiresAt,
+        serverTime: new Date()
       });
     }
     
-    // Add user to participants
-    const added = session.addParticipant(req.user._id);
-    
-    if (added === false) {
-      return res.status(400).json({ message: 'You are already in this session' });
+    // Add user to participants if not already included
+    if (!session.participants.includes(req.user._id)) {
+      session.participants.push(req.user._id);
+      await session.save();
+      
+      // Add the new participant to the usernames object
+      participantUsernames[req.user._id.toString()] = req.user.username;
     }
     
-    await session.save();
+    // Calculate expiresAt if session is active but missing this field
+    let expiresAt = session.expiresAt;
+    if (session.isActive && session.startTime && !expiresAt) {
+      const startTime = new Date(session.startTime);
+      expiresAt = new Date(startTime.getTime() + session.duration * 1000);
+    }
     
     res.json({
       _id: session._id,
       creator: session.creator,
+      creatorUsername,
       participants: session.participants,
+      participantUsernames,
       duration: session.duration,
       isActive: session.isActive,
       startTime: session.startTime,
+      expiresAt: expiresAt,
+      serverTime: new Date(),
       userId: req.user._id
     });
   } catch (error) {
+    console.error('Error in joinSession:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -296,9 +330,6 @@ export const completeSession = async (req, res) => {
   }
 };
 
-// @desc    Get session status
-// @route   GET /sessions/:id/status
-// @access  Private
 export const getSessionStatus = async (req, res) => {
   try {
     const session = await Session.findById(req.params.id);
@@ -315,14 +346,46 @@ export const getSessionStatus = async (req, res) => {
         isActive: session.isActive
       });
     }
+
+    // Get creator information
+    const creator = await User.findById(session.creator);
+    const creatorUsername = creator ? creator.username : 'Unknown User';
+    
+    // Get participant usernames
+    let participantUsernames = {};
+    
+    if (session.participants && session.participants.length > 0) {
+      const users = await User.find({
+        _id: { $in: session.participants }
+      }).select('_id username');
+      
+      users.forEach(user => {
+        participantUsernames[user._id.toString()] = user.username;
+      });
+    }
+    
+    // If we have a startTime but no expiresAt, calculate it
+    let expiresAt = session.expiresAt;
+    if (session.isActive && session.startTime && !expiresAt) {
+      const startTime = new Date(session.startTime);
+      expiresAt = new Date(startTime.getTime() + session.duration * 1000);
+    }
+    
+    // Include the current server time for client synchronization
+    const serverTime = new Date();
     
     res.json({
       participants: session.participants,
+      participantUsernames,
+      creatorUsername,
+      creator: session.creator,
       isActive: session.isActive,
       startTime: session.startTime,
-      expiresAt: session.expiresAt
+      expiresAt: expiresAt,
+      serverTime: serverTime
     });
   } catch (error) {
+    console.error('Error in getSessionStatus:', error);
     res.status(400).json({ message: error.message });
   }
 };

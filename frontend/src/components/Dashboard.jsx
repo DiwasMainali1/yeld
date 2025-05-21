@@ -1,23 +1,24 @@
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useState, useEffect, memo, useRef } from "react";
-import { Play, Pause, RotateCcw, Clock, Image, Users, X } from "lucide-react";
-import Header from "./Header";
-import MusicPlayer from "./MusicPlayer";
-import QuoteSection from "./QuoteSection";
-import Alarm from "../music/notification.mp3";
-import TaskList from "./Tasklist";
-import GroupSession from "./GroupSession";
-import { useSession } from "./SessionContext";
-import BackgroundModal from "./BackgroundModal";
-import cafeBackground from "../backgrounds/cafe.jpg";
-import fireplaceBackground from "../backgrounds/fireplace.jpg";
-import forestBackground from "../backgrounds/forest.jpg";
-import galaxyBackground from "../backgrounds/galaxy.jpg";
-import ghibliBackground from "../backgrounds/ghibli.jpg";
-import midnightBackground from "../backgrounds/midnight.jpg";
-import oceanBackground from "../backgrounds/ocean.jpg";
-import spiritedBackground from "../backgrounds/spirited.jpg";
-import sunsetBackground from "../backgrounds/sunset.jpg";
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, memo, useRef } from 'react';
+import { Play, Pause, RotateCcw, Clock, Image, Users, X, LogOut } from 'lucide-react';
+import Header from './Header';
+import MusicPlayer from './MusicPlayer';
+import SessionParticipantsModal from './SessionParticipantsModal';
+import QuoteSection from './QuoteSection';
+import Alarm from '../music/notification.mp3';
+import TaskList from './Tasklist';
+import GroupSession from './GroupSession';
+import { useSession } from './SessionContext';
+import BackgroundModal from './BackgroundModal';
+import cafeBackground from '../backgrounds/cafe.jpg';
+import fireplaceBackground from '../backgrounds/fireplace.jpg';
+import forestBackground from '../backgrounds/forest.jpg';
+import galaxyBackground from '../backgrounds/galaxy.jpg';
+import ghibliBackground from '../backgrounds/ghibli.jpg';
+import midnightBackground from '../backgrounds/midnight.jpg';
+import oceanBackground from '../backgrounds/ocean.jpg';
+import spiritedBackground from '../backgrounds/spirited.jpg';
+import sunsetBackground from '../backgrounds/sunset.jpg';
 
 const backgroundMap = {
   default: null,
@@ -39,7 +40,7 @@ const MemoizedTaskList = memo(TaskList);
 function Dashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const sessionIdFromUrl = searchParams.get("session");
+  const sessionIdFromUrl = searchParams.get('session');
 
   const {
     session,
@@ -54,19 +55,21 @@ function Dashboard() {
     participantNames,
   } = useSession();
 
+  // Timer duration states (in seconds)
   const [pomodoroDuration, setPomodoroDuration] = useState(50 * 60);
   const [shortBreakDuration, setShortBreakDuration] = useState(10 * 60);
   const [longBreakDuration, setLongBreakDuration] = useState(60 * 60);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
+  // Timer & session states
   const [time, setTime] = useState(pomodoroDuration);
   const [isActive, setIsActive] = useState(false);
   const [timerSessionStarted, setTimerSessionStarted] = useState(false);
-  const [timerType, setTimerType] = useState("pomodoro");
+  const [timerType, setTimerType] = useState('pomodoro');
   const [currentCycleCount, setCurrentCycleCount] = useState(0);
   const sessionTimerRef = useRef(null);
   const [sessionEndTime, setSessionEndTime] = useState(null);
 
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState('');
   const [totalTimeStudied, setTotalTimeStudied] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [audio] = useState(new Audio(Alarm));
@@ -74,18 +77,23 @@ function Dashboard() {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [participantsList, setParticipantsList] = useState([]);
 
+  // Modal controls
   const [showEditModal, setShowEditModal] = useState(false);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
 
+  // Mobile responsive states
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  const [background, setBackground] = useState("default");
+  // Background state
+  const [background, setBackground] = useState('default');
 
+  // Temporary inputs for editing durations (in minutes)
   const [tempPomodoro, setTempPomodoro] = useState(pomodoroDuration / 60);
   const [tempShortBreak, setTempShortBreak] = useState(shortBreakDuration / 60);
   const [tempLongBreak, setTempLongBreak] = useState(longBreakDuration / 60);
 
+  // Track window size for responsive layout
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -94,18 +102,20 @@ function Dashboard() {
       }
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
+  // Check for session ID in URL on component mount
   useEffect(() => {
     if (sessionIdFromUrl && !isInSession) {
       joinSession(sessionIdFromUrl);
     }
   }, [sessionIdFromUrl, isInSession, joinSession]);
 
+  // When session context changes, update timer if needed
   useEffect(() => {
     if (isInSession) {
       setTime(sessionDuration);
@@ -117,62 +127,68 @@ function Dashboard() {
     }
   }, [isInSession, sessionDuration, sessionStarted, isActive]);
 
+  // Update timer if session gets started
 useEffect(() => {
-  console.log("Timer effect triggered with:", {
-    isInSession,
-    sessionStarted,
-    isActive,
-    session,
-    serverTimeOffset
-  });
-
+  // Clear existing interval if any
   if (sessionTimerRef.current) {
     clearInterval(sessionTimerRef.current);
     sessionTimerRef.current = null;
   }
 
+  // For group sessions, handle the timer with server-synchronized time
   if (isInSession && sessionStarted && isActive && session) {
-    console.log("Session data for timer:", {
+    console.log("Setting up group session timer with data:", {
       startTime: session.startTime,
       expiresAt: session.expiresAt,
-      duration: session.duration
+      duration: sessionDuration
     });
     
-    const startTime = new Date(session.startTime).getTime();
-    const endTime = new Date(session.expiresAt).getTime();
+    // Make sure we have valid date objects for calculations
+    let endTime;
     
-    console.log("Parsed times:", {
-      startTimeRaw: session.startTime,
-      startTimeParsed: startTime,
-      endTimeRaw: session.expiresAt,
-      endTimeParsed: endTime,
-      isStartTimeNaN: isNaN(startTime),
-      isEndTimeNaN: isNaN(endTime)
-    });
+    if (session.expiresAt) {
+      endTime = new Date(session.expiresAt).getTime();
+    } else if (session.startTime) {
+      // Fallback to calculating from startTime + duration if expiresAt is missing
+      const startTime = new Date(session.startTime).getTime();
+      endTime = startTime + (sessionDuration * 1000);
+    } else {
+      // If both are missing, just use duration as countdown
+      setTime(sessionDuration);
+      return;
+    }
     
+    if (isNaN(endTime)) {
+      console.error("Invalid endTime calculated:", { 
+        expiresAt: session.expiresAt,
+        startTime: session.startTime,
+        sessionDuration 
+      });
+      setTime(sessionDuration);
+      return;
+    }
+    
+    console.log("Session end time calculated:", new Date(endTime).toISOString());
     setSessionEndTime(endTime);
 
+    // Use a fixed interval that accounts for server time offset
     sessionTimerRef.current = setInterval(() => {
       const currentTime = Date.now() + serverTimeOffset;
       const remainingTime = Math.max(
         0,
-        Math.floor((endTime - currentTime) / 1000),
+        Math.floor((endTime - currentTime) / 1000)
       );
       
       console.log("Timer calculation:", {
-        currentTime,
-        endTime,
-        difference: endTime - currentTime,
-        remainingTime,
-        serverTimeOffset
+        currentTime: new Date(currentTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        remainingTime
       });
 
       if (remainingTime <= 0) {
         clearInterval(sessionTimerRef.current);
         sessionTimerRef.current = null;
-        audio
-          .play()
-          .catch((error) => console.error("Error playing alarm:", error));
+        audio.play().catch((error) => console.error("Error playing alarm:", error));
         updateUserStats(sessionDuration);
         setTime(0);
         setIsActive(false);
@@ -181,57 +197,63 @@ useEffect(() => {
       }
     }, 1000);
   }
-}, [isActive, isInSession, sessionStarted, session, serverTimeOffset]);
+  // For local timer (not in a group session)
+  else if (!isInSession && isActive) {
+    sessionTimerRef.current = setInterval(() => {
+      setTime((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(sessionTimerRef.current);
+          sessionTimerRef.current = null;
+          audio.play().catch((error) => console.error("Error playing alarm:", error));
+          
+          if (timerType === 'pomodoro') {
+            updateUserStats(pomodoroDuration);
+          }
+          
+          handleTimerCompletion();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  }
 
-  const handleJoinSessionWithSync = async (sessionId) => {
-    try {
-      const result = await joinSession(sessionId);
-
-      if (result && result.isActive) {
-        const serverEndTime = new Date(result.expiresAt).getTime();
-        const serverTime = new Date(result.serverTime).getTime();
-        const clientTime = Date.now();
-        const offset = serverTime - clientTime;
-
-        setServerTimeOffset(offset);
-
-        const remainingTime = Math.floor(
-          (serverEndTime - (clientTime + offset)) / 1000,
-        );
-        setTime(Math.max(0, remainingTime));
-        setIsActive(true);
-        setTimerSessionStarted(true);
-      }
-
-      return result;
-    } catch (error) {
-      return null;
+  return () => {
+    if (sessionTimerRef.current) {
+      clearInterval(sessionTimerRef.current);
+      sessionTimerRef.current = null;
     }
   };
+}, [isActive, isInSession, sessionStarted, session, serverTimeOffset, sessionDuration]);
 
+  // Function to handle timer completion and cycle between timers
   const handleTimerCompletion = () => {
     setIsActive(false);
     setTimerSessionStarted(false);
 
-    if (timerType === "pomodoro") {
+    if (timerType === 'pomodoro') {
+      // After completing a pomodoro, handle break switching
       const newCycleCount = currentCycleCount + 1;
       setCurrentCycleCount(newCycleCount);
 
+      // After third Pomodoro, switch to long break
       if (newCycleCount % 3 === 0) {
-        setTimerType("longBreak");
+        setTimerType('longBreak');
         setTime(longBreakDuration);
       } else {
-        setTimerType("shortBreak");
+        setTimerType('shortBreak');
         setTime(shortBreakDuration);
       }
-    } else if (timerType === "shortBreak" || timerType === "longBreak") {
-      setTimerType("pomodoro");
+    } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
+      // After any break, switch back to Pomodoro
+      setTimerType('pomodoro');
       setTime(pomodoroDuration);
     }
   };
 
+  // Background styles based on selection
   const renderBackground = () => {
-    if (background === "default" || !backgroundMap[background]) {
+    if (background === 'default' || !backgroundMap[background]) {
       return <div className="fixed inset-0 bg-black -z-10"></div>;
     }
 
@@ -247,17 +269,20 @@ useEffect(() => {
     );
   };
 
+  // Load saved background from localStorage
   useEffect(() => {
-    const savedBackground = localStorage.getItem("background");
+    const savedBackground = localStorage.getItem('background');
     if (savedBackground) {
       setBackground(savedBackground);
     }
   }, []);
 
+  // Save background to localStorage when changed
   useEffect(() => {
-    localStorage.setItem("background", background);
+    localStorage.setItem('background', background);
   }, [background]);
 
+  // Update participantsList when participantNames changes
   useEffect(() => {
     setParticipantsList(participantNames || []);
   }, [participantNames]);
@@ -265,7 +290,7 @@ useEffect(() => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem("userToken");
+        const token = localStorage.getItem('userToken');
         const response = await fetch("http://localhost:5000/dashboard", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -278,7 +303,9 @@ useEffect(() => {
         setUsername(data.username);
         localStorage.setItem("username", data.username);
         await fetchUserStats(data.username);
-      } catch (error) {}
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
     };
     fetchUser();
   }, []);
@@ -286,14 +313,14 @@ useEffect(() => {
   const fetchUserStats = async (currentUsername) => {
     try {
       if (!currentUsername) return;
-      const token = localStorage.getItem("userToken");
+      const token = localStorage.getItem('userToken');
       const response = await fetch(
         `http://localhost:5000/profile/${currentUsername}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
       if (!response.ok) {
         throw new Error("Failed to fetch user stats");
@@ -302,6 +329,7 @@ useEffect(() => {
       setTotalTimeStudied(data.totalTimeStudied);
       setCompletedSessions(data.sessionsCompleted || 0);
 
+      // Set the background from user profile if available
       if (data.background) {
         setBackground(data.background);
       }
@@ -311,19 +339,20 @@ useEffect(() => {
         setShortBreakDuration(data.timerSettings.shortBreak);
         setLongBreakDuration(data.timerSettings.longBreak);
 
-        if (!timerSessionStarted && !isInSession && timerType === "pomodoro") {
+        if (!timerSessionStarted && !isInSession && timerType === 'pomodoro') {
           setTime(data.timerSettings.pomodoro);
         }
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    }
   };
 
   const updateUserStats = async (duration) => {
     try {
-      const token = localStorage.getItem("userToken");
-      const actualDuration =
-        duration || (isInSession ? sessionDuration : pomodoroDuration);
-
+      const token = localStorage.getItem('userToken');
+      const actualDuration = duration || (isInSession ? sessionDuration : pomodoroDuration);
+      
       const response = await fetch("http://localhost:5000/session/complete", {
         method: "POST",
         headers: {
@@ -342,15 +371,16 @@ useEffect(() => {
       const data = await response.json();
       setTotalTimeStudied(data.totalTimeStudied);
       setCompletedSessions((prev) => prev + 1);
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error updating session stats:', error);
+    }
   };
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
       if (timerSessionStarted || (isInSession && sessionStarted)) {
         event.preventDefault();
-        event.returnValue =
-          "You have an active session. Are you sure you want to leave?";
+        event.returnValue = "You have an active session. Are you sure you want to leave?";
         return event.returnValue;
       }
     };
@@ -362,29 +392,41 @@ useEffect(() => {
 
   const toggleTimer = () => {
     if (isInSession && !sessionStarted && isCreator) {
+      // Start group session with loading indicator
       setIsLoadingSession(true);
       startSession().then((response) => {
         if (response) {
-          const serverTime = new Date(response.serverTime).getTime();
-          const clientTime = Date.now();
-          const offset = serverTime - clientTime;
-          setServerTimeOffset(offset);
+          // Calculate server time offset from response
+          if (response.serverTime) {
+            const serverTime = new Date(response.serverTime).getTime();
+            const clientTime = Date.now();
+            const offset = serverTime - clientTime;
+            setServerTimeOffset(offset);
+            console.log("Server time offset set to:", offset);
+          }
 
-          const serverEndTime = new Date(response.expiresAt).getTime();
-          setSessionEndTime(serverEndTime);
-
+          // Set session end time if available
+          if (response.expiresAt) {
+            const serverEndTime = new Date(response.expiresAt).getTime();
+            setSessionEndTime(serverEndTime);
+          }
+          
           setIsActive(true);
         }
         setIsLoadingSession(false);
+      })
+      .catch(error => {
+        console.error("Error starting session:", error);
+        setIsLoadingSession(false);
       });
     } else if (!isInSession) {
+      // Regular timer toggle
       if (!isActive && !timerSessionStarted) {
         setTimerSessionStarted(true);
       }
       setIsActive(!isActive);
     }
   };
-
   const resetTimer = () => {
     if (isInSession && sessionStarted) {
       return;
@@ -394,13 +436,13 @@ useEffect(() => {
     setTimerSessionStarted(false);
     setCurrentCycleCount(0);
     switch (timerType) {
-      case "pomodoro":
+      case 'pomodoro':
         setTime(pomodoroDuration);
         break;
-      case "shortBreak":
+      case 'shortBreak':
         setTime(shortBreakDuration);
         break;
-      case "longBreak":
+      case 'longBreak':
         setTime(longBreakDuration);
         break;
       default:
@@ -414,20 +456,20 @@ useEffect(() => {
     }
     if (timerSessionStarted) {
       const confirmed = window.confirm(
-        "Changing timer type will reset your current session. Are you sure?",
+        "Changing timer type will reset your current session. Are you sure?"
       );
       if (!confirmed) return;
     }
     setTimerType(type);
     setCurrentCycleCount(0);
     switch (type) {
-      case "pomodoro":
+      case 'pomodoro':
         setTime(pomodoroDuration);
         break;
-      case "shortBreak":
+      case 'shortBreak':
         setTime(shortBreakDuration);
         break;
-      case "longBreak":
+      case 'longBreak':
         setTime(longBreakDuration);
         break;
       default:
@@ -443,6 +485,7 @@ useEffect(() => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Show modal to edit all timer settings
   const handleOpenEditModal = () => {
     if (isInSession && sessionStarted) {
       return;
@@ -453,6 +496,7 @@ useEffect(() => {
     setShowEditModal(true);
   };
 
+  // Save the updated timer settings
   const handleSaveTimerSettings = async () => {
     const newPomodoro = tempPomodoro * 60;
     const newShortBreak = tempShortBreak * 60;
@@ -462,14 +506,16 @@ useEffect(() => {
     setShortBreakDuration(newShortBreak);
     setLongBreakDuration(newLongBreak);
 
+    // If the timer isn't running, update the displayed time too
     if (!timerSessionStarted && !isInSession) {
-      if (timerType === "pomodoro") setTime(newPomodoro);
-      else if (timerType === "shortBreak") setTime(newShortBreak);
-      else if (timerType === "longBreak") setTime(newLongBreak);
+      if (timerType === 'pomodoro') setTime(newPomodoro);
+      else if (timerType === 'shortBreak') setTime(newShortBreak);
+      else if (timerType === 'longBreak') setTime(newLongBreak);
     }
 
+    // Save to backend
     try {
-      const token = localStorage.getItem("userToken");
+      const token = localStorage.getItem('userToken');
       const response = await fetch("http://localhost:5000/profile/update", {
         method: "PUT",
         headers: {
@@ -487,7 +533,9 @@ useEffect(() => {
       if (!response.ok) {
         throw new Error("Failed to save timer settings");
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error saving timer settings:', error);
+    }
 
     setShowEditModal(false);
   };
@@ -496,6 +544,7 @@ useEffect(() => {
     setShowEditModal(false);
   };
 
+  // Background selection handlers
   const handleOpenBackgroundModal = () => {
     setShowBackgroundModal(true);
   };
@@ -509,7 +558,7 @@ useEffect(() => {
     setShowBackgroundModal(false);
 
     try {
-      const token = localStorage.getItem("userToken");
+      const token = localStorage.getItem('userToken');
       const response = await fetch("http://localhost:5000/profile/update", {
         method: "PUT",
         headers: {
@@ -520,13 +569,19 @@ useEffect(() => {
           background: backgroundId,
         }),
       });
-    } catch (error) {}
+      if (!response.ok) {
+        throw new Error("Failed to save background preference");
+      }
+    } catch (error) {
+      console.error('Error saving background preference:', error);
+    }
   };
 
+  // Handle exiting a session
   const handleExitSession = async () => {
     if (
       window.confirm(
-        "Are you sure you want to exit the session? Your progress will be saved.",
+        "Are you sure you want to exit the session? Your progress will be saved."
       )
     ) {
       try {
@@ -545,14 +600,16 @@ useEffect(() => {
           clearInterval(sessionTimerRef.current);
           sessionTimerRef.current = null;
         }
-      } catch (error) {}
+      } catch (error) {
+        console.error('Error exiting session:', error);
+      }
     }
   };
 
   const navigateWithConfirmation = (path) => {
     if (isInSession || timerSessionStarted) {
       const confirmed = window.confirm(
-        "You have an active session. Are you sure you want to leave this page? Your progress will be saved.",
+        "You have an active session. Are you sure you want to leave this page? Your progress will be saved."
       );
       if (!confirmed) return;
 
@@ -581,6 +638,7 @@ useEffect(() => {
     setShowMobileMenu(!showMobileMenu);
   };
 
+  // Determine if mobile layout should be used
   const isMobile = windowWidth < 768;
   const isSmallScreen = windowWidth < 1024;
   const isExtraSmallScreen = windowWidth < 640;
@@ -628,7 +686,7 @@ useEffect(() => {
                 onClick={() => {
                   if (isInSession || timerSessionStarted) {
                     const confirmed = window.confirm(
-                      "You have an active session. Are you sure you want to log out?",
+                      "You have an active session. Are you sure you want to log out?"
                     );
                     if (!confirmed) return;
                     if (isInSession) handleExitSession();
@@ -806,6 +864,20 @@ useEffect(() => {
                     </span>
                   </button>
                 )}
+                
+                {isInSession && sessionStarted && (
+                  <button
+                    onClick={handleExitSession}
+                    className={`flex items-center gap-2 bg-red-900/30 text-white py-1 px-2 sm:py-2 sm:px-4 rounded-xl font-semibold hover:bg-red-800/50 border border-red-800/30 transition duration-300 shadow-lg hover:shadow-red-900/25 ${
+                      isExtraSmallScreen ? "text-xs" : "text-sm"
+                    }`}
+                  >
+                    <LogOut size={isExtraSmallScreen ? 16 : 20} />
+                    <span className={`${isExtraSmallScreen ? "hidden" : "inline"}`}>
+                      Exit Session
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
             <div className="mt-4">
@@ -900,68 +972,25 @@ useEffect(() => {
         isSmallScreen={isExtraSmallScreen}
       />
 
-      {showParticipantsModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div
-            className={`bg-zinc-950 rounded-xl border border-zinc-800 p-4 sm:p-6 w-full ${isExtraSmallScreen ? "max-w-xs" : "max-w-md"}`}
+      {isInSession && (
+        <div className="flex justify-center mb-4 md:mb-6">
+          <button
+            onClick={() => setShowParticipantsModal(true)}
+            className="flex items-center gap-2 bg-zinc-900/50 px-4 py-2 rounded-xl hover:bg-zinc-900 transition-colors"
           >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-white text-lg font-semibold">
-                Session Participants
-              </h3>
-              <button
-                onClick={() => setShowParticipantsModal(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="max-h-60 sm:max-h-80 overflow-y-auto mb-4">
-              {participantsList.length > 0 ? (
-                <ul className="space-y-2">
-                  {participantsList.map((participant, index) => (
-                    <li
-                      key={index}
-                      className="bg-zinc-900 p-3 rounded-lg flex items-center gap-3"
-                    >
-                      <div className="bg-zinc-800 w-8 h-8 rounded-full flex items-center justify-center">
-                        <Users className="w-4 h-4 text-gray-300" />
-                      </div>
-                      <span className="text-gray-200">
-                        {participant}
-                        {index === 0 && (
-                          <span className="text-xs text-green-400 ml-2">
-                            (Host)
-                          </span>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-400 text-center py-4">
-                  No participants yet
-                </p>
-              )}
-            </div>
-
-            <div className="text-center text-gray-400 text-sm mb-4">
-              Total: {participants}{" "}
+            <Users className="w-5 h-5 text-green-400" />
+            <span className="text-white">
+              {participants}{" "}
               {participants === 1 ? "Participant" : "Participants"}
-            </div>
-
-            <div className="flex justify-center">
-              <button
-                onClick={() => setShowParticipantsModal(false)}
-                className="px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       )}
+      <SessionParticipantsModal
+        isOpen={showParticipantsModal}
+        onClose={() => setShowParticipantsModal(false)}
+        participantsList={participantsList}
+      />
     </div>
   );
 }

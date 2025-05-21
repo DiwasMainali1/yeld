@@ -5,57 +5,28 @@ const SessionContext = createContext();
 export const useSession = () => useContext(SessionContext);
 
 export const SessionProvider = ({ children }) => {
+  // Session state
   const [session, setSession] = useState(null);
   const [isInSession, setIsInSession] = useState(false);
-  const [participants, setParticipants] = useState(0);
   const [isCreator, setIsCreator] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [sessionExpiry, setSessionExpiry] = useState(null);
+  
+  // Participants state
+  const [participants, setParticipants] = useState(0);
   const [participantNames, setParticipantNames] = useState([]);
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
 
+  // Time synchronization
+  const [serverTimeOffset, setServerTimeOffset] = useState(0);
+
   // Check for existing session on load
   useEffect(() => {
-    const checkExistingSession = async () => {
-      try {
-        const token = localStorage.getItem('userToken');
-        if (!token) return;
-
-        const response = await fetch('http://localhost:5000/sessions/check', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data.session) {
-            setSession(data.session);
-            setIsInSession(true);
-            setParticipants(data.session.participants.length + 1); // +1 for creator
-            setIsCreator(data.session.creator === data.userId);
-            setSessionStarted(data.session.isActive);
-            setSessionDuration(data.session.duration);
-            
-            if (data.session.isActive && data.session.startTime) {
-              // Calculate remaining time
-              const startTime = new Date(data.session.startTime);
-              const expiryTime = new Date(startTime.getTime() + data.session.duration * 1000);
-              setSessionExpiry(expiryTime);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error checking existing session:', error);
-      }
-    };
-
     checkExistingSession();
   }, []);
 
-  // Set up polling to check for session updates
+  // Poll for session updates when in an active session
   useEffect(() => {
     let intervalId;
     
@@ -70,12 +41,12 @@ export const SessionProvider = ({ children }) => {
     };
   }, [isInSession, session]);
 
-  const checkSessionStatus = useCallback(async () => {
-    if (!session) return;
-    
+  const checkExistingSession = async () => {
     try {
       const token = localStorage.getItem('userToken');
-      const response = await fetch(`http://localhost:5000/sessions/${session._id}/status`, {
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/sessions/check', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -84,42 +55,141 @@ export const SessionProvider = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
         
-        // Update participant information
-        setParticipants(data.participants.length + 1); // +1 for the creator
-        
-        // Fetch participant usernames - this would require backend support
-        // For now we'll use placeholder data or IDs
-        const participantList = ['Session Creator']; // Creator always at index 0
-        if (data.participants && data.participants.length > 0) {
-          // Assuming participants contain user IDs or usernames
-          // In a real app, you might want to fetch actual usernames from the backend
-          data.participants.forEach(participant => {
-            participantList.push(`Participant ${participant.substring(0, 6)}`);
-          });
-        }
-        setParticipantNames(participantList);
-        
-        // Update session started status
-        if (!sessionStarted && data.isActive) {
-          setSessionStarted(true);
-          
-          // Set session expiry for timer calculations
-          if (data.startTime) {
-            const startTime = new Date(data.startTime);
-            const expiryTime = new Date(startTime.getTime() + sessionDuration * 1000);
-            setSessionExpiry(expiryTime);
-          }
-        }
-        
-        // If session expired or deleted
-        if (data.expired || data.deleted) {
-          resetSessionState();
+        if (data.session) {
+          updateSessionState(data.session, data.userId);
         }
       }
     } catch (error) {
-      console.error('Error checking session status:', error);
+      console.error('Error checking existing session:', error);
     }
-  }, [session, sessionDuration, sessionStarted]);
+  };
+
+  // Update all session state from session data
+  const updateSessionState = (sessionData, userId) => {
+    setSession(sessionData);
+    setIsInSession(true);
+    
+    // Update participant count
+    setParticipants(sessionData.participants.length + 1); // +1 for creator
+    
+    // Determine if current user is the creator
+    const currentUserId = userId || localStorage.getItem('userId');
+    const userIsCreator = currentUserId && sessionData.creator === currentUserId;
+    setIsCreator(userIsCreator);
+    
+    setSessionStarted(sessionData.isActive);
+    setSessionDuration(sessionData.duration);
+    
+    // Set up participants list
+    updateParticipantsList(sessionData, currentUserId);
+    
+    // If session is already active, set the expiry time
+    if (sessionData.isActive && sessionData.startTime) {
+      const expiryTime = new Date(sessionData.expiresAt);
+      setSessionExpiry(expiryTime);
+    }
+  };
+
+  // Function to update participants list
+const updateParticipantsList = (sessionData, currentUserId) => {
+  console.log("Updating participants list:", {
+    creator: sessionData.creator,
+    participants: sessionData.participants,
+    currentUserId
+  });
+  
+  const participantsList = [];
+  const currentUsername = localStorage.getItem('username') || 'You';
+  
+  // Add the creator (with their actual username)
+  if (sessionData.creator === currentUserId) {
+    // This is us
+    participantsList.push(currentUsername);
+  } else {
+    // Add creator's username if we have it, otherwise use their ID
+    participantsList.push(localStorage.getItem('creatorName') || 'Tryhard');
+  }
+  
+  // Add all participants with their usernames
+  if (sessionData.participants && sessionData.participants.length > 0) {
+    sessionData.participants.forEach(participantId => {
+      if (participantId === currentUserId) {
+        // This is us - we were already added if we're the creator
+        if (sessionData.creator !== currentUserId) {
+          participantsList.push(currentUsername);
+        }
+      } else {
+        // Add the participant with their username if available
+        const participantName = localStorage.getItem(`user_${participantId}`) || 'Tryhard';
+        participantsList.push(participantName);
+      }
+    });
+  }
+  
+  console.log("Updated participants list:", participantsList);
+  setParticipantNames(participantsList);
+};
+
+
+const checkSessionStatus = useCallback(async () => {
+  if (!session) return;
+  
+  try {
+    const token = localStorage.getItem('userToken');
+    const response = await fetch(`http://localhost:5000/sessions/${session._id}/status`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Update participant count
+      setParticipants(data.participants.length + 1); // +1 for creator
+      
+      // Update participants list
+      const currentUserId = localStorage.getItem('userId');
+      updateParticipantsList({ ...session, participants: data.participants }, currentUserId);
+      
+      // Update session started status
+      if (!sessionStarted && data.isActive) {
+        console.log("Session was started by host:", {
+          startTime: data.startTime,
+          expiresAt: data.expiresAt
+        });
+        
+        setSessionStarted(true);
+        
+        // Set session expiry for timer calculations
+        if (data.startTime) {
+          // Calculate the remaining time
+          const startTime = new Date(data.startTime).getTime();
+          const expiryTime = data.expiresAt 
+            ? new Date(data.expiresAt).getTime() 
+            : startTime + (sessionDuration * 1000);
+            
+          // Set the expiry time
+          setSessionExpiry(new Date(expiryTime));
+          
+          // Update session data with the start and end times
+          setSession(prev => ({
+            ...prev,
+            startTime: data.startTime,
+            expiresAt: data.expiresAt || new Date(expiryTime).toISOString()
+          }));
+        }
+      }
+      
+      // If session expired or deleted
+      if (data.expired || data.deleted) {
+        resetSessionState();
+      }
+    }
+  } catch (error) {
+    console.error('Error checking session status:', error);
+  }
+}, [session, sessionStarted, sessionDuration]);
 
   const resetSessionState = () => {
     setSession(null);
@@ -129,6 +199,7 @@ export const SessionProvider = ({ children }) => {
     setSessionStarted(false);
     setSessionDuration(0);
     setSessionExpiry(null);
+    setParticipantNames([]);
   };
 
   const createSession = async (duration) => {
@@ -145,12 +216,23 @@ export const SessionProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Store user ID if provided
+        if (data.userId) {
+          localStorage.setItem('userId', data.userId);
+        }
+        
+        // Update state
         setSession(data);
         setIsInSession(true);
         setParticipants(1); // Creator starts alone
         setIsCreator(true);
         setSessionStarted(false);
         setSessionDuration(duration);
+        
+        // Set the host in participants list
+        setParticipantNames(["Host"]);
+        
         // Return session ID to be used for link creation
         return data._id;
       }
@@ -174,31 +256,18 @@ const joinSession = async (sessionId) => {
     if (response.ok) {
       const data = await response.json();
       
-      // If session is already active but missing expiresAt, calculate it
-      if (data.isActive && data.startTime) {
-        if (!data.expiresAt) {
-          // Create expiresAt if it's missing
-          const startTime = new Date(data.startTime);
-          data.expiresAt = new Date(startTime.getTime() + data.duration * 1000).toISOString();
-        }
+      // Store user ID for session tracking
+      if (data.userId) {
+        localStorage.setItem('userId', data.userId);
       }
       
-      // Now set the session with complete data
-      setSession(data);
-      setIsInSession(true);
-      setParticipants(data.participants.length + 1); // +1 for creator
-      setIsCreator(data.userId && data.creator === data.userId);
-      setSessionStarted(data.isActive);
-      setSessionDuration(data.duration);
-      
-      // If session is already active, set the expiry time
-      if (data.isActive && data.startTime) {
-        const startTime = new Date(data.startTime);
-        const expiryTime = new Date(data.expiresAt || startTime.getTime() + data.duration * 1000);
-        setSessionExpiry(expiryTime);
+      // Store creator info if provided
+      if (data.creatorUsername) {
+        localStorage.setItem('creatorName', data.creatorUsername);
       }
       
-      return data; // Return the data for possible use in Dashboard component
+      updateSessionState(data, data.userId);
+      return data;
     }
     return false;
   } catch (error) {
@@ -213,10 +282,6 @@ const joinSession = async (sessionId) => {
     try {
       setIsLoadingParticipants(true);
       
-      // First, grab the current participants list
-      await checkSessionStatus();
-      
-      // Then start the session
       const token = localStorage.getItem('userToken');
       const response = await fetch(`http://localhost:5000/sessions/${session._id}/start`, {
         method: 'POST',
@@ -228,7 +293,13 @@ const joinSession = async (sessionId) => {
       if (response.ok) {
         const data = await response.json();
         
-        // Update the session object with the returned data
+        // Update server time offset for synchronization
+        const serverTime = new Date(data.serverTime).getTime();
+        const clientTime = Date.now();
+        const offset = serverTime - clientTime;
+        setServerTimeOffset(offset);
+        
+        // Update the session state
         setSession({
           ...session,
           startTime: data.startTime,
@@ -239,14 +310,11 @@ const joinSession = async (sessionId) => {
         setSessionStarted(true);
         
         // Set session expiry from startTime + duration
-        if (data.startTime) {
-          const startTime = new Date(data.startTime);
-          const expiryTime = new Date(data.expiresAt || startTime.getTime() + sessionDuration * 1000);
-          setSessionExpiry(expiryTime);
-        }
+        const expiryTime = new Date(data.expiresAt);
+        setSessionExpiry(expiryTime);
         
         setIsLoadingParticipants(false);
-        return data; // Return the entire data object for synchronization in Dashboard
+        return data;
       }
       
       setIsLoadingParticipants(false);
@@ -272,10 +340,12 @@ const joinSession = async (sessionId) => {
 
       // Reset state regardless of response
       resetSessionState();
+      return true;
     } catch (error) {
       console.error('Error leaving session:', error);
       // Still reset state even if API call fails
       resetSessionState();
+      return false;
     }
   };
 
@@ -291,6 +361,7 @@ const joinSession = async (sessionId) => {
         sessionStarted,
         sessionDuration,
         sessionExpiry,
+        serverTimeOffset,
         createSession,
         joinSession,
         startSession,

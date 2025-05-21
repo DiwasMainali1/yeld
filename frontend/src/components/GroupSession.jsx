@@ -1,9 +1,8 @@
-// GroupSession.jsx - Improved version with better error handling and synchronization
 import React, { useState, useEffect } from 'react';
 import { Users, Link, X, Clock, Play } from 'lucide-react';
 import { useSession } from './SessionContext';
 
-const GroupSession = () => {
+const GroupSession = ({ handleExitSession }) => {
   const { 
     session,
     isInSession, 
@@ -21,7 +20,7 @@ const GroupSession = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [sessionId, setSessionId] = useState('');
-  const [duration, setDuration] = useState(2); // Default 25 minutes
+  const [duration, setDuration] = useState(25); // Default 25 minutes
   const [sessionLink, setSessionLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
@@ -103,20 +102,7 @@ const GroupSession = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleExitSession = async () => {
-    if (window.confirm('Are you sure you want to exit the session?')) {
-      setIsLoading(true);
-      try {
-        await leaveSession();
-      } catch (err) {
-        console.error('Error leaving session:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handleStartSession = async () => {
+  const handleStartSessionClick = async () => {
     setIsLoading(true);
     try {
       await startSession();
@@ -135,6 +121,7 @@ const GroupSession = () => {
             <Users className="w-5 h-5 text-green-400" />
             <span className="text-white font-medium">
               Group Session
+              {sessionStarted && <span className="ml-2 text-xs text-green-400">(Active)</span>}
             </span>
           </div>
           
@@ -191,7 +178,7 @@ const GroupSession = () => {
             
             <div className="mt-4">
               <button
-                onClick={handleStartSession}
+                onClick={handleStartSessionClick}
                 disabled={isLoading}
                 className={`w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
