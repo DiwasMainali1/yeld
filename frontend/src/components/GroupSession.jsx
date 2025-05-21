@@ -1,25 +1,27 @@
+// GroupSession.jsx - Improved version with better error handling and synchronization
 import React, { useState, useEffect } from 'react';
 import { Users, Link, X, Clock, Play } from 'lucide-react';
 import { useSession } from './SessionContext';
 
 const GroupSession = () => {
   const { 
+    session,
     isInSession, 
     createSession, 
     joinSession, 
     leaveSession,
     startSession,
     participants,
+    participantNames,
     isCreator,
     sessionStarted,
-    sessionDuration,
-    session
+    sessionDuration
   } = useSession();
   
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [sessionId, setSessionId] = useState('');
-  const [duration, setDuration] = useState(25); // Default 25 minutes
+  const [duration, setDuration] = useState(2); // Default 25 minutes
   const [sessionLink, setSessionLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
@@ -103,7 +105,14 @@ const GroupSession = () => {
 
   const handleExitSession = async () => {
     if (window.confirm('Are you sure you want to exit the session?')) {
-      await leaveSession();
+      setIsLoading(true);
+      try {
+        await leaveSession();
+      } catch (err) {
+        console.error('Error leaving session:', err);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -131,10 +140,17 @@ const GroupSession = () => {
           
           <button 
             onClick={handleExitSession}
-            className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+            disabled={isLoading}
+            className={`text-xs text-red-400 hover:text-red-300 flex items-center gap-1 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <X className="w-3 h-3" />
-            Exit
+            {isLoading ? (
+              <div className="animate-spin h-3 w-3 border border-red-400 rounded-full border-t-transparent"></div>
+            ) : (
+              <>
+                <X className="w-3 h-3" />
+                Exit
+              </>
+            )}
           </button>
         </div>
         
@@ -152,7 +168,8 @@ const GroupSession = () => {
           </span>
         </div>
         
-        {!sessionStarted && isCreator && (
+        {/* Only show share link if session not started and user is creator */}
+        {!sessionStarted && isCreator && sessionLink && (
           <>
             <div className="mt-3 text-xs text-gray-400">
               <p>Share this link to invite others to your session:</p>
@@ -176,7 +193,7 @@ const GroupSession = () => {
               <button
                 onClick={handleStartSession}
                 disabled={isLoading}
-                className={`w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors ${isLoading ? 'opacity-70' : ''}`}
+                className={`w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
@@ -194,12 +211,17 @@ const GroupSession = () => {
           </>
         )}
         
+        {/* Show waiting message for participants */}
         {!sessionStarted && !isCreator && (
           <div className="mt-3 text-center text-gray-400 text-sm">
             <p>Waiting for host to start the session...</p>
+            <div className="mt-3 flex justify-center">
+              <div className="animate-pulse bg-green-500/20 w-4 h-4 rounded-full"></div>
+            </div>
           </div>
         )}
         
+        {/* Show active session message */}
         {sessionStarted && (
           <div className="mt-2 flex items-center gap-2">
             <Clock className="w-4 h-4 text-green-400" />
@@ -210,12 +232,13 @@ const GroupSession = () => {
     );
   }
 
+  // Show create/join options if not in a session
   return (
     <>
-      <div className="mt-4 flex space-x-2">
+      <div className="mt-4 flex space-x-2 justify-center">
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 bg-zinc-800/30 border border-gray-800 max-w-60 hover:bg-zinc-900 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
         >
           <Users className="w-4 h-4" />
           Create Session
@@ -223,7 +246,7 @@ const GroupSession = () => {
         
         <button
           onClick={() => setShowJoinModal(true)}
-          className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 bg-zinc-800/30 border border-gray-800 max-w-60 hover:bg-zinc-900 text-white px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
         >
           <Link className="w-4 h-4" />
           Join Session
@@ -281,7 +304,7 @@ const GroupSession = () => {
               <button
                 onClick={handleCreateSession}
                 disabled={isLoading}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ${isLoading ? 'opacity-70' : ''}`}
+                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
@@ -339,7 +362,7 @@ const GroupSession = () => {
               <button
                 onClick={handleJoinSession}
                 disabled={isLoading}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ${isLoading ? 'opacity-70' : ''}`}
+                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>

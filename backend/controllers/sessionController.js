@@ -185,20 +185,23 @@ export const startSession = async (req, res) => {
       return res.status(400).json({ message: 'Session has expired' });
     }
     
-    // Update session
+    // Use exact server time
+    const serverTime = new Date();
     session.isActive = true;
-    session.startTime = new Date();
+    session.startTime = serverTime;
     
-    // Update expiresAt to be startTime + duration
-    session.expiresAt = new Date(session.startTime.getTime() + session.duration * 1000);
+    // Set precise end time based on server time
+    const serverEndTime = new Date(serverTime.getTime() + session.duration * 1000);
+    session.expiresAt = serverEndTime;
     
     await session.save();
     
     res.json({
       _id: session._id,
       isActive: session.isActive,
-      startTime: session.startTime,
-      expiresAt: session.expiresAt
+      startTime: serverTime,
+      expiresAt: serverEndTime,
+      serverTime: serverTime // Send current server time for synchronization
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -338,9 +341,9 @@ const updateSessionStats = async (userId, session, sessionCompleted = false) => 
       return;
     }
     
-    // If sessionCompleted is true, it means the session ran to completion
-    // In this case, award the full session duration
+    // If sessionCompleted is true AND we have server-calculated duration, use it
     if (sessionCompleted) {
+      // For completed sessions, use the actual duration in minutes
       const minutesStudied = Math.floor(session.duration / 60);
       user.sessionsCompleted += 1;
       user.totalTimeStudied += minutesStudied;
@@ -348,10 +351,9 @@ const updateSessionStats = async (userId, session, sessionCompleted = false) => 
       return;
     }
     
-    // Otherwise, calculate the actual time spent (this branch should not be used normally)
-    console.warn('Warning: Calculating partial session time - this should not happen normally');
-    const now = new Date();
+    // For partial sessions or early exits, calculate actual time spent
     const startTime = new Date(session.startTime);
+    const now = new Date();
     const endTime = session.isExpired ? 
       new Date(startTime.getTime() + session.duration * 1000) : 
       now;

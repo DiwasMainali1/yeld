@@ -161,40 +161,51 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
-  const joinSession = async (sessionId) => {
-    try {
-      const token = localStorage.getItem('userToken');
-      const response = await fetch(`http://localhost:5000/sessions/${sessionId}/join`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSession(data);
-        setIsInSession(true);
-        setParticipants(data.participants.length + 1); // +1 for creator
-        setIsCreator(data.userId && data.creator === data.userId);
-        setSessionStarted(data.isActive);
-        setSessionDuration(data.duration);
-        
-        // If session is already active, set the expiry time
-        if (data.isActive && data.startTime) {
-          const startTime = new Date(data.startTime);
-          const expiryTime = new Date(startTime.getTime() + data.duration * 1000);
-          setSessionExpiry(expiryTime);
-        }
-        
-        return true;
+const joinSession = async (sessionId) => {
+  try {
+    const token = localStorage.getItem('userToken');
+    const response = await fetch(`http://localhost:5000/sessions/${sessionId}/join`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-      return false;
-    } catch (error) {
-      console.error('Error joining session:', error);
-      return false;
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      
+      // If session is already active but missing expiresAt, calculate it
+      if (data.isActive && data.startTime) {
+        if (!data.expiresAt) {
+          // Create expiresAt if it's missing
+          const startTime = new Date(data.startTime);
+          data.expiresAt = new Date(startTime.getTime() + data.duration * 1000).toISOString();
+        }
+      }
+      
+      // Now set the session with complete data
+      setSession(data);
+      setIsInSession(true);
+      setParticipants(data.participants.length + 1); // +1 for creator
+      setIsCreator(data.userId && data.creator === data.userId);
+      setSessionStarted(data.isActive);
+      setSessionDuration(data.duration);
+      
+      // If session is already active, set the expiry time
+      if (data.isActive && data.startTime) {
+        const startTime = new Date(data.startTime);
+        const expiryTime = new Date(data.expiresAt || startTime.getTime() + data.duration * 1000);
+        setSessionExpiry(expiryTime);
+      }
+      
+      return data; // Return the data for possible use in Dashboard component
     }
-  };
+    return false;
+  } catch (error) {
+    console.error('Error joining session:', error);
+    return false;
+  }
+};
 
   const startSession = async () => {
     if (!session || !isCreator) return false;
@@ -216,17 +227,26 @@ export const SessionProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Update the session object with the returned data
+        setSession({
+          ...session,
+          startTime: data.startTime,
+          expiresAt: data.expiresAt,
+          isActive: true
+        });
+        
         setSessionStarted(true);
         
         // Set session expiry from startTime + duration
         if (data.startTime) {
           const startTime = new Date(data.startTime);
-          const expiryTime = new Date(startTime.getTime() + sessionDuration * 1000);
+          const expiryTime = new Date(data.expiresAt || startTime.getTime() + sessionDuration * 1000);
           setSessionExpiry(expiryTime);
         }
         
         setIsLoadingParticipants(false);
-        return true;
+        return data; // Return the entire data object for synchronization in Dashboard
       }
       
       setIsLoadingParticipants(false);
