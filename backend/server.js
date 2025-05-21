@@ -8,6 +8,7 @@ import multer from 'multer';
 import { connectDB } from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
+import sessionRoutes from './routes/sessionRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
 import { 
     getDashboard, 
@@ -54,6 +55,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use('/auth', userRoutes);
 app.use('/tasks', taskRoutes);
+app.use('/sessions', sessionRoutes); // Add session routes
 
 //Update profile photo
 app.put('/profile/update', protect, updateProfile);
