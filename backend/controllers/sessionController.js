@@ -553,7 +553,6 @@ const updateSessionStats = async (userId, session, sessionCompleted = false, cus
       sessionActive: session.isActive
     });
     
-    // Handle completed sessions (full duration)
     if (sessionCompleted) {
       const minutesStudied = Math.floor(session.duration / 60);
       user.sessionsCompleted += 1;
@@ -565,7 +564,7 @@ const updateSessionStats = async (userId, session, sessionCompleted = false, cus
         completedAt: new Date()
       };
       
-      console.log(`Added ${minutesStudied} minutes for completed session`);
+      console.log(`Added ${minutesStudied} minutes for completed session (using full duration)`);
       await user.save();
       return;
     }
@@ -589,29 +588,42 @@ const updateSessionStats = async (userId, session, sessionCompleted = false, cus
       return;
     }
     
-    // Handle timed sessions (calculate actual time spent)
+    // Handle early exit scenarios - calculate actual time spent
     if (session.isActive && session.startTime) {
       const startTime = new Date(session.startTime);
       const now = new Date();
-      const endTime = new Date(startTime.getTime() + session.duration * 1000);
+      const sessionEndTime = new Date(startTime.getTime() + session.duration * 1000);
       
-      const actualEndTime = now > endTime ? endTime : now;
-      const timeSpentSeconds = Math.floor((actualEndTime - startTime) / 1000);
+      // Check if session completed naturally vs early exit
+      const sessionCompletedNaturally = now >= sessionEndTime;
       
-      const minutesStudied = Math.floor(timeSpentSeconds / 60);
-      if (minutesStudied > 0) {
+      if (sessionCompletedNaturally) {
+        // If session completed naturally, use full duration regardless of timing differences
+        const minutesStudied = Math.floor(session.duration / 60);
         user.sessionsCompleted += 1;
         user.totalTimeStudied += minutesStudied;
         
-        // Update the last completed session to prevent duplicates
-        user.lastCompletedSession = {
-          sessionId: sessionId,
-          completedAt: new Date()
-        };
+        console.log(`Added ${minutesStudied} minutes for naturally completed session`);
+      } else {
+        // Only for early exits, calculate actual time spent
+        const actualEndTime = now > sessionEndTime ? sessionEndTime : now;
+        const timeSpentSeconds = Math.floor((actualEndTime - startTime) / 1000);
+        const minutesStudied = Math.floor(timeSpentSeconds / 60);
         
-        console.log(`Added ${minutesStudied} minutes for timed session`);
-        await user.save();
+        if (minutesStudied > 0) {
+          user.sessionsCompleted += 1;
+          user.totalTimeStudied += minutesStudied;
+          console.log(`Added ${minutesStudied} minutes for early exit`);
+        }
       }
+      
+      // Update the last completed session to prevent duplicates
+      user.lastCompletedSession = {
+        sessionId: sessionId,
+        completedAt: new Date()
+      };
+      
+      await user.save();
     }
   } catch (error) {
     console.error('Error updating session stats:', error);

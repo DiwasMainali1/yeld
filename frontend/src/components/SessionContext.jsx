@@ -305,8 +305,6 @@ export const SessionProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error checking session status:', error);
-      // If there's a network error, don't reset the session immediately
-      // Let the user handle it manually or wait for the next check
     }
   }, [session, sessionStarted, sessionDuration, sessionCompleted]);
 
