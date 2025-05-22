@@ -329,7 +329,6 @@ useEffect(() => {
       setTotalTimeStudied(data.totalTimeStudied);
       setCompletedSessions(data.sessionsCompleted || 0);
 
-      // Set the background from user profile if available
       if (data.background) {
         setBackground(data.background);
       }
@@ -725,6 +724,7 @@ useEffect(() => {
                 >
                   <button
                     onClick={() => handleTimerTypeChange("pomodoro")}
+                    disabled={isInSession}
                     className={`px-2 sm:px-4 md:px-6 py-2 rounded-lg transition-colors ${
                       timerType === "pomodoro"
                         ? "bg-zinc-800 text-white"
@@ -735,6 +735,7 @@ useEffect(() => {
                   </button>
                   <button
                     onClick={() => handleTimerTypeChange("shortBreak")}
+                    disabled={isInSession}
                     className={`px-2 sm:px-4 md:px-6 py-2 rounded-lg transition-colors ${
                       timerType === "shortBreak"
                         ? "bg-zinc-800 text-white"
@@ -745,6 +746,7 @@ useEffect(() => {
                   </button>
                   <button
                     onClick={() => handleTimerTypeChange("longBreak")}
+                    disabled={isInSession}
                     className={`px-2 sm:px-4 md:px-6 py-2 rounded-lg transition-colors ${
                       timerType === "longBreak"
                         ? "bg-zinc-800 text-white"
@@ -798,7 +800,11 @@ useEffect(() => {
                   </button>
                 )}
 
-                {(!isInSession || (isInSession && !sessionStarted)) && (
+                {/* Only show reset button if:
+                    1. Not in a session at all, OR
+                    2. In a session but it hasn't started AND user is the creator
+                    This hides the reset button for participants waiting for host to start */}
+                {(!isInSession || (isInSession && !sessionStarted && isCreator)) && (
                   <button
                     onClick={resetTimer}
                     className="bg-zinc-900/30 text-white p-4 md:p-6 rounded-full hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"

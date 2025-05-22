@@ -67,7 +67,6 @@ const GroupSession = ({ handleExitSession }) => {
     }
     
     try {
-      // Extract session ID if a full URL was pasted
       let idToJoin = sessionId;
       if (sessionId.includes('session=')) {
         try {
@@ -77,7 +76,6 @@ const GroupSession = ({ handleExitSession }) => {
             idToJoin = extractedId;
           }
         } catch (e) {
-          // If URL parsing fails, use the original input
           console.error('Error parsing session URL:', e);
         }
       }
@@ -242,8 +240,8 @@ const GroupSession = ({ handleExitSession }) => {
 
       {/* Create Session Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-zinc-950 rounded-xl border border-zinc-800 p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-zinc-950/30 rounded-xl border border-zinc-800/30 p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-white text-lg font-semibold">Create Group Session</h3>
               <button 
@@ -265,8 +263,10 @@ const GroupSession = ({ handleExitSession }) => {
               <select
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-white"
+                className="w-full bg-zinc-900/30 border border-zinc-700 rounded-lg p-2 text-white"
               >
+                <option value={2}>2 minutes</option>
+                <option value={5}>10 minutes</option>
                 <option value={25}>25 minutes</option>
                 <option value={30}>30 minutes</option>
                 <option value={45}>45 minutes</option>
@@ -291,7 +291,7 @@ const GroupSession = ({ handleExitSession }) => {
               <button
                 onClick={handleCreateSession}
                 disabled={isLoading}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`px-4 py-2 text-black bg-gray-300 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>

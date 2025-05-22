@@ -96,7 +96,6 @@ export const checkSession = async (req, res) => {
 // @desc    Join an existing session
 // @route   POST /sessions/:id/join
 // @access  Private
-// Update the joinSession function to include complete participant information
 export const joinSession = async (req, res) => {
   try {
     const session = await Session.findById(req.params.id);
@@ -272,18 +271,20 @@ export const leaveSession = async (req, res) => {
       }
     }
     
-    // Remove user from session
-    const result = session.removeParticipant(req.user._id);
+    // Check if the leaving user is the creator
+    const isCreatorLeaving = session.creator.equals(req.user._id);
     
-    // If creator is leaving, delete the session
-    if (result === 'delete' || session.participants.length === 0) {
+    if (isCreatorLeaving) {
+      // If creator is leaving, delete the entire session
       await Session.deleteOne({ _id: session._id });
       return res.json({ message: 'Session deleted successfully' });
+    } else {
+      // If participant is leaving, just remove them from participants array
+      session.participants = session.participants.filter(id => !id.equals(req.user._id));
+      await session.save();
+      return res.json({ message: 'Left session successfully' });
     }
     
-    await session.save();
-    
-    res.json({ message: 'Left session successfully' });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -330,6 +331,9 @@ export const completeSession = async (req, res) => {
   }
 };
 
+// @desc    Get session status
+// @route   GET /sessions/:id/status
+// @access  Private
 export const getSessionStatus = async (req, res) => {
   try {
     const session = await Session.findById(req.params.id);
@@ -364,7 +368,6 @@ export const getSessionStatus = async (req, res) => {
       });
     }
     
-    // If we have a startTime but no expiresAt, calculate it
     let expiresAt = session.expiresAt;
     if (session.isActive && session.startTime && !expiresAt) {
       const startTime = new Date(session.startTime);

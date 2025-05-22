@@ -33,7 +33,7 @@ export const SessionProvider = ({ children }) => {
     if (isInSession && session) {
       intervalId = setInterval(() => {
         checkSessionStatus();
-      }, 5000);
+      }, 2000);
     }
     
     return () => {
@@ -70,7 +70,7 @@ export const SessionProvider = ({ children }) => {
     setIsInSession(true);
     
     // Update participant count
-    setParticipants(sessionData.participants.length + 1); // +1 for creator
+    setParticipants(sessionData.participants.length + 1);
     
     // Determine if current user is the creator
     const currentUserId = userId || localStorage.getItem('userId');
@@ -91,105 +91,126 @@ export const SessionProvider = ({ children }) => {
   };
 
   // Function to update participants list
-const updateParticipantsList = (sessionData, currentUserId) => {
-  console.log("Updating participants list:", {
-    creator: sessionData.creator,
-    participants: sessionData.participants,
-    currentUserId
-  });
-  
-  const participantsList = [];
-  const currentUsername = localStorage.getItem('username') || 'You';
-  
-  // Add the creator (with their actual username)
-  if (sessionData.creator === currentUserId) {
-    // This is us
-    participantsList.push(currentUsername);
-  } else {
-    // Add creator's username if we have it, otherwise use their ID
-    participantsList.push(localStorage.getItem('creatorName') || 'Tryhard');
-  }
-  
-  // Add all participants with their usernames
-  if (sessionData.participants && sessionData.participants.length > 0) {
-    sessionData.participants.forEach(participantId => {
-      if (participantId === currentUserId) {
-        // This is us - we were already added if we're the creator
-        if (sessionData.creator !== currentUserId) {
-          participantsList.push(currentUsername);
-        }
-      } else {
-        // Add the participant with their username if available
-        const participantName = localStorage.getItem(`user_${participantId}`) || 'Tryhard';
-        participantsList.push(participantName);
-      }
+  const updateParticipantsList = (sessionData, currentUserId) => {
+    console.log("Updating participants list with data:", {
+      creator: sessionData.creator,
+      participants: sessionData.participants,
+      currentUserId,
+      participantUsernames: sessionData.participantUsernames || {}
     });
-  }
-  
-  console.log("Updated participants list:", participantsList);
-  setParticipantNames(participantsList);
-};
-
-
-const checkSessionStatus = useCallback(async () => {
-  if (!session) return;
-  
-  try {
-    const token = localStorage.getItem('userToken');
-    const response = await fetch(`http://localhost:5000/sessions/${session._id}/status`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Update participant count
-      setParticipants(data.participants.length + 1); // +1 for creator
-      
-      // Update participants list
-      const currentUserId = localStorage.getItem('userId');
-      updateParticipantsList({ ...session, participants: data.participants }, currentUserId);
-      
-      // Update session started status
-      if (!sessionStarted && data.isActive) {
-        console.log("Session was started by host:", {
-          startTime: data.startTime,
-          expiresAt: data.expiresAt
-        });
-        
-        setSessionStarted(true);
-        
-        // Set session expiry for timer calculations
-        if (data.startTime) {
-          // Calculate the remaining time
-          const startTime = new Date(data.startTime).getTime();
-          const expiryTime = data.expiresAt 
-            ? new Date(data.expiresAt).getTime() 
-            : startTime + (sessionDuration * 1000);
-            
-          // Set the expiry time
-          setSessionExpiry(new Date(expiryTime));
-          
-          // Update session data with the start and end times
-          setSession(prev => ({
-            ...prev,
-            startTime: data.startTime,
-            expiresAt: data.expiresAt || new Date(expiryTime).toISOString()
-          }));
-        }
-      }
-      
-      // If session expired or deleted
-      if (data.expired || data.deleted) {
-        resetSessionState();
-      }
+    
+    // Create a new empty array for the participant list
+    const participantsList = [];
+    const currentUsername = localStorage.getItem('username') || 'You';
+    
+    // Get creator username (could be us or someone else)
+    const creatorUsername = sessionData.creator === currentUserId 
+      ? currentUsername 
+      : (sessionData.creatorUsername || localStorage.getItem('creatorName') || 'Unknown');
+    
+    // Add creator to the list (but don't add duplicates)
+    if (!participantsList.includes(creatorUsername)) {
+      participantsList.push(creatorUsername);
     }
-  } catch (error) {
-    console.error('Error checking session status:', error);
-  }
-}, [session, sessionStarted, sessionDuration]);
+    
+    // Process participants array (if available)
+    if (sessionData.participants && sessionData.participants.length > 0) {
+      // Iterate through all participants
+      sessionData.participants.forEach(participantId => {
+        let participantName;
+        
+        // If this participant is the current user
+        if (participantId === currentUserId) {
+          participantName = currentUsername;
+        } 
+        // If we have usernames from the server response
+        else if (sessionData.participantUsernames && sessionData.participantUsernames[participantId]) {
+          participantName = sessionData.participantUsernames[participantId];
+        }
+        // Use stored username if available
+        else {
+          participantName = localStorage.getItem(`user_${participantId}`) || 'User';
+        }
+        
+        // Only add if not already in the list
+        if (!participantsList.includes(participantName)) {
+          participantsList.push(participantName);
+        }
+      });
+    }
+    
+    console.log("Final participants list:", participantsList);
+    setParticipantNames(participantsList);
+  };
+
+  const checkSessionStatus = useCallback(async () => {
+    if (!session) return;
+    
+    try {
+      const token = localStorage.getItem('userToken');
+      const response = await fetch(`http://localhost:5000/sessions/${session._id}/status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.status === 404) {
+        resetSessionState();
+        return;
+      }
+      if (response.ok) {
+        const data = await response.json();
+        
+        setParticipants(data.participants.length + 1);
+        
+        if (data.participantUsernames) {
+          Object.entries(data.participantUsernames).forEach(([id, username]) => {
+            localStorage.setItem(`user_${id}`, username);
+          });
+        }
+        
+        if (data.creatorUsername) {
+          localStorage.setItem('creatorName', data.creatorUsername);
+        }
+        
+        // Update participants list with full data
+        const currentUserId = localStorage.getItem('userId');
+        updateParticipantsList({
+          ...session,
+          participants: data.participants,
+          participantUsernames: data.participantUsernames,
+          creatorUsername: data.creatorUsername
+        }, currentUserId);
+        
+        // Handle session status updates
+        if (!sessionStarted && data.isActive) {
+          setSessionStarted(true);
+          
+          if (data.startTime) {
+            // Set session expiry for timer calculations
+            const expiryTime = data.expiresAt 
+              ? new Date(data.expiresAt) 
+              : new Date(new Date(data.startTime).getTime() + sessionDuration * 1000);
+              
+            setSessionExpiry(expiryTime);
+            
+            // Update session object with timing data
+            setSession(prev => ({
+              ...prev,
+              startTime: data.startTime,
+              expiresAt: data.expiresAt || expiryTime.toISOString()
+            }));
+          }
+        }
+        
+        // Handle expired or deleted sessions
+        if (data.expired || data.deleted) {
+          resetSessionState();
+        }
+      }
+    } catch (error) {
+      console.error('Error checking session status:', error);
+    }
+  }, [session, sessionStarted, sessionDuration]);
 
   const resetSessionState = () => {
     setSession(null);
@@ -243,38 +264,38 @@ const checkSessionStatus = useCallback(async () => {
     }
   };
 
-const joinSession = async (sessionId) => {
-  try {
-    const token = localStorage.getItem('userToken');
-    const response = await fetch(`http://localhost:5000/sessions/${sessionId}/join`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+  const joinSession = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('userToken');
+      const response = await fetch(`http://localhost:5000/sessions/${sessionId}/join`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Store user ID for session tracking
-      if (data.userId) {
-        localStorage.setItem('userId', data.userId);
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Store user ID for session tracking
+        if (data.userId) {
+          localStorage.setItem('userId', data.userId);
+        }
+        
+        // Store creator info if provided
+        if (data.creatorUsername) {
+          localStorage.setItem('creatorName', data.creatorUsername);
+        }
+        
+        updateSessionState(data, data.userId);
+        return data;
       }
-      
-      // Store creator info if provided
-      if (data.creatorUsername) {
-        localStorage.setItem('creatorName', data.creatorUsername);
-      }
-      
-      updateSessionState(data, data.userId);
-      return data;
+      return false;
+    } catch (error) {
+      console.error('Error joining session:', error);
+      return false;
     }
-    return false;
-  } catch (error) {
-    console.error('Error joining session:', error);
-    return false;
-  }
-};
+  };
 
   const startSession = async () => {
     if (!session || !isCreator) return false;
@@ -338,7 +359,6 @@ const joinSession = async (sessionId) => {
         }
       });
 
-      // Reset state regardless of response
       resetSessionState();
       return true;
     } catch (error) {
