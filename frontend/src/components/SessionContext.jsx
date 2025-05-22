@@ -90,38 +90,34 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
-  // Function to update participants list
   const updateParticipantsList = (sessionData, currentUserId) => {
-
-    // Create a new empty array for the participant list
     const participantsList = [];
     const currentUsername = localStorage.getItem('username') || 'You';
     
-    // Get creator username (could be us or someone else)
+    // Determine creator's display name
     const creatorUsername = sessionData.creator === currentUserId 
       ? currentUsername 
       : (sessionData.creatorUsername || localStorage.getItem('creatorName') || 'Unknown');
     
-    // Add creator to the list (but don't add duplicates)
-    if (!participantsList.includes(creatorUsername)) {
-      participantsList.push(creatorUsername);
-    }
+    // Always add the creator with (Host) label first
+    participantsList.push(creatorUsername + " (Host)");
     
     // Process participants array (if available)
     if (sessionData.participants && sessionData.participants.length > 0) {
-      // Iterate through all participants
       sessionData.participants.forEach(participantId => {
+        // Skip the creator since we already added them with (Host) label
+        if (participantId === sessionData.creator) {
+          return;
+        }
+        
         let participantName;
         
-        // If this participant is the current user
         if (participantId === currentUserId) {
           participantName = currentUsername;
         } 
-        // If we have usernames from the server response
         else if (sessionData.participantUsernames && sessionData.participantUsernames[participantId]) {
           participantName = sessionData.participantUsernames[participantId];
         }
-        // Use stored username if available
         else {
           participantName = localStorage.getItem(`user_${participantId}`) || 'User';
         }
@@ -133,6 +129,7 @@ export const SessionProvider = ({ children }) => {
       });
     }
     
+    console.log('Final participantsList:', participantsList);
     setParticipantNames(participantsList);
   };
 
@@ -239,12 +236,11 @@ export const SessionProvider = ({ children }) => {
         // Update state
         setSession(data);
         setIsInSession(true);
-        setParticipants(1); // Creator starts alone
+        setParticipants(1);
         setIsCreator(true);
         setSessionStarted(false);
         setSessionDuration(duration);
         
-        // Set the host in participants list
         setParticipantNames(["Host"]);
         
         // Return session ID to be used for link creation
@@ -270,12 +266,10 @@ export const SessionProvider = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
         
-        // Store user ID for session tracking
         if (data.userId) {
           localStorage.setItem('userId', data.userId);
         }
         
-        // Store creator info if provided
         if (data.creatorUsername) {
           localStorage.setItem('creatorName', data.creatorUsername);
         }
