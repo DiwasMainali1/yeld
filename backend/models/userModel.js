@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema({
     background: {
         type: String,
         default: 'default'
+    },
+    lastCompletedSession: {
+        sessionId: String,
+        completedAt: { type: Date, default: Date.now }
     }
 }, {
     timestamps: true

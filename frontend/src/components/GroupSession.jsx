@@ -38,7 +38,6 @@ const GroupSession = ({ handleExitSession }) => {
     setIsLoading(true);
     
     try {
-      // Convert minutes to seconds for the API
       const sessionId = await createSession(duration * 60);
       
       if (sessionId) {
@@ -265,8 +264,8 @@ const GroupSession = ({ handleExitSession }) => {
                 onChange={(e) => setDuration(Number(e.target.value))}
                 className="w-full bg-zinc-900/30 border border-zinc-700 rounded-lg p-2 text-white"
               >
-                <option value={2}>2 minutes</option>
-                <option value={5}>10 minutes</option>
+                <option value={1}>1 minute</option>
+                <option value={10}>10 minutes</option>
                 <option value={25}>25 minutes</option>
                 <option value={30}>30 minutes</option>
                 <option value={45}>45 minutes</option>

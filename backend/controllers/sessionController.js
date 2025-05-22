@@ -28,7 +28,7 @@ export const createSession = async (req, res) => {
     // Create new session
     const session = await Session.create({
       creator: req.user._id,
-      participants: [], // Creator is not in participants array
+      participants: [],
       duration: duration
     });
     
@@ -36,7 +36,7 @@ export const createSession = async (req, res) => {
       _id: session._id,
       duration: session.duration,
       participants: [],
-      userId: req.user._id.toString() // Add userId for client-side tracking
+      userId: req.user._id.toString()
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -60,11 +60,12 @@ export const checkSession = async (req, res) => {
       return res.json({ session: null });
     }
     
-    // Check if session is expired
+    // Check if session is expired or completed
     if (session.isExpired) {
-      // If it's expired, clean it up and return no session
+      console.log('Session expired, cleaning up:', session._id);
+      
+      // If the session was active and has finished naturally, update user stats
       if (session.isActive && session.startTime) {
-        // If the session was active AND has finished naturally, update user stats before deleting
         const startTime = new Date(session.startTime);
         const endTime = new Date(startTime.getTime() + session.duration * 1000);
         
@@ -106,6 +107,7 @@ export const checkSession = async (req, res) => {
         duration: session.duration,
         isActive: session.isActive,
         startTime: session.startTime,
+        expiresAt: session.expiresAt,
         creatorUsername,
         creatorAvatar,
         participantUsernames,
@@ -263,12 +265,18 @@ export const startSession = async (req, res) => {
     
     await session.save();
     
+    console.log(`Session ${session._id} started:`, {
+      startTime: serverTime.toISOString(),
+      expiresAt: serverEndTime.toISOString(),
+      duration: session.duration
+    });
+    
     res.json({
       _id: session._id,
       isActive: session.isActive,
       startTime: serverTime,
       expiresAt: serverEndTime,
-      serverTime: serverTime // Send current server time for synchronization
+      serverTime: serverTime
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -294,14 +302,25 @@ export const leaveSession = async (req, res) => {
       return res.status(403).json({ message: 'You are not part of this session' });
     }
     
-    // Only update stats if session was active, has a startTime, and has completed naturally
+    // Handle session completion stats
     if (session.isActive && session.startTime) {
       const startTime = new Date(session.startTime);
       const sessionEndTime = new Date(startTime.getTime() + session.duration * 1000);
+      const now = new Date();
       
-      // Only update stats if the session has reached its natural end time
-      if (new Date() >= sessionEndTime) {
+      // Check if session completed naturally (reached end time)
+      const sessionCompletedNaturally = now >= sessionEndTime;
+      
+      if (sessionCompletedNaturally) {
+        console.log(`User ${req.user._id} completed session ${session._id} naturally`);
         await updateSessionStats(req.user._id, session, true);
+      } else {
+        console.log(`User ${req.user._id} left session ${session._id} early`);
+        // Update stats with partial time only if significant time was spent
+        const timeSpent = Math.floor((now - startTime) / 1000);
+        if (timeSpent >= 60) { // At least 1 minute
+          await updateSessionStats(req.user._id, session, false, timeSpent);
+        }
       }
     }
     
@@ -309,7 +328,29 @@ export const leaveSession = async (req, res) => {
     const isCreatorLeaving = session.creator.equals(req.user._id);
     
     if (isCreatorLeaving) {
-      // If creator is leaving, delete the entire session
+      console.log(`Creator leaving session ${session._id}, deleting session`);
+      // Update stats for all participants before deleting
+      if (session.isActive && session.startTime) {
+        const allParticipants = [session.creator, ...session.participants];
+        for (const participantId of allParticipants) {
+          if (!participantId.equals(req.user._id)) { // Skip the leaving creator (already handled above)
+            const startTime = new Date(session.startTime);
+            const sessionEndTime = new Date(startTime.getTime() + session.duration * 1000);
+            const now = new Date();
+            const sessionCompletedNaturally = now >= sessionEndTime;
+            
+            if (sessionCompletedNaturally) {
+              await updateSessionStats(participantId, session, true);
+            } else {
+              const timeSpent = Math.floor((now - startTime) / 1000);
+              if (timeSpent >= 60) {
+                await updateSessionStats(participantId, session, false, timeSpent);
+              }
+            }
+          }
+        }
+      }
+      
       await Session.deleteOne({ _id: session._id });
       return res.json({ message: 'Session deleted successfully' });
     } else {
@@ -320,6 +361,7 @@ export const leaveSession = async (req, res) => {
     }
     
   } catch (error) {
+    console.error('Error in leaveSession:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -345,6 +387,7 @@ export const completeSession = async (req, res) => {
     
     // Only update stats if session was active and has a startTime
     if (session.isActive && session.startTime) {
+      console.log(`Session ${session._id} completed by user ${req.user._id}`);
       await updateSessionStats(req.user._id, session, true);
       
       // Get updated user stats
@@ -361,6 +404,7 @@ export const completeSession = async (req, res) => {
       res.status(400).json({ message: 'Session was not active' });
     }
   } catch (error) {
+    console.error('Error in completeSession:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -378,11 +422,56 @@ export const getSessionStatus = async (req, res) => {
     
     // Check if session is expired
     if (session.isExpired) {
+      console.log(`Session ${session._id} has expired, cleaning up`);
+      
+      // If the session was active and completed naturally, update stats for all participants
+      if (session.isActive && session.startTime) {
+        const startTime = new Date(session.startTime);
+        const endTime = new Date(startTime.getTime() + session.duration * 1000);
+        
+        // Only update stats if the session has reached its natural end time
+        if (new Date() >= endTime) {
+          console.log(`Updating stats for all participants in expired session ${session._id}`);
+          const allParticipants = [session.creator, ...session.participants];
+          
+          for (const participantId of allParticipants) {
+            await updateSessionStats(participantId, session, true);
+          }
+        }
+      }
+      
+      // Delete the expired session
+      await Session.deleteOne({ _id: session._id });
+      
       return res.json({ 
         expired: true,
-        participants: session.participants,
-        isActive: session.isActive
+        message: 'Session has expired and been cleaned up'
       });
+    }
+
+    // Check if session should be expired based on time (additional safety check)
+    if (session.isActive && session.startTime) {
+      const startTime = new Date(session.startTime);
+      const endTime = new Date(startTime.getTime() + session.duration * 1000);
+      const now = new Date();
+      
+      if (now >= endTime) {
+        console.log(`Session ${session._id} should be expired based on time calculation`);
+        
+        // Update stats for all participants
+        const allParticipants = [session.creator, ...session.participants];
+        for (const participantId of allParticipants) {
+          await updateSessionStats(participantId, session, true);
+        }
+        
+        // Mark as expired and delete
+        await Session.deleteOne({ _id: session._id });
+        
+        return res.json({ 
+          expired: true,
+          message: 'Session completed and cleaned up'
+        });
+      }
     }
 
     // Get creator information with avatar
@@ -417,14 +506,15 @@ export const getSessionStatus = async (req, res) => {
     res.json({
       participants: session.participants,
       participantUsernames,
-      participantAvatars, // Include participant avatars
+      participantAvatars,
       creatorUsername,
-      creatorAvatar, // Include creator avatar
+      creatorAvatar,
       creator: session.creator,
       isActive: session.isActive,
       startTime: session.startTime,
       expiresAt: expiresAt,
-      serverTime: serverTime
+      serverTime: serverTime,
+      expired: false
     });
   } catch (error) {
     console.error('Error in getSessionStatus:', error);
@@ -433,7 +523,7 @@ export const getSessionStatus = async (req, res) => {
 };
 
 // Helper function to update user stats when session completes
-const updateSessionStats = async (userId, session, sessionCompleted = false) => {
+const updateSessionStats = async (userId, session, sessionCompleted = false, customDuration = null) => {
   try {
     // Only update if the session was active
     if (!session.isActive || !session.startTime) {
@@ -446,34 +536,82 @@ const updateSessionStats = async (userId, session, sessionCompleted = false) => 
       return;
     }
     
-    // If sessionCompleted is true AND we have server-calculated duration, use it
+    const sessionId = session._id.toString();
+    
+    // Check if this session was already completed (within last 5 minutes to be safe)
+    if (user.lastCompletedSession && 
+        user.lastCompletedSession.sessionId === sessionId &&
+        (Date.now() - user.lastCompletedSession.completedAt) < 5 * 60 * 1000) {
+      console.log(`Stats already updated for user ${userId} and session ${sessionId}`);
+      return;
+    }
+    
+    console.log(`Updating stats for user ${userId}:`, {
+      sessionCompleted,
+      customDuration,
+      sessionDuration: session.duration,
+      sessionActive: session.isActive
+    });
+    
+    // Handle completed sessions (full duration)
     if (sessionCompleted) {
-      // For completed sessions, use the actual duration in minutes
       const minutesStudied = Math.floor(session.duration / 60);
       user.sessionsCompleted += 1;
       user.totalTimeStudied += minutesStudied;
+      
+      // Update the last completed session to prevent duplicates
+      user.lastCompletedSession = {
+        sessionId: sessionId,
+        completedAt: new Date()
+      };
+      
+      console.log(`Added ${minutesStudied} minutes for completed session`);
       await user.save();
       return;
     }
     
-    // For partial sessions or early exits, calculate actual time spent
-    const startTime = new Date(session.startTime);
-    const now = new Date();
-    const endTime = session.isExpired ? 
-      new Date(startTime.getTime() + session.duration * 1000) : 
-      now;
+    // Handle custom duration (when user exits early with specific time)
+    if (customDuration && customDuration > 0) {
+      const minutesStudied = Math.floor(customDuration / 60);
+      if (minutesStudied > 0) {
+        user.sessionsCompleted += 1;
+        user.totalTimeStudied += minutesStudied;
+        
+        // Update the last completed session to prevent duplicates
+        user.lastCompletedSession = {
+          sessionId: sessionId,
+          completedAt: new Date()
+        };
+        
+        console.log(`Added ${minutesStudied} minutes for partial session`);
+        await user.save();
+      }
+      return;
+    }
     
-    const timeSpentSeconds = Math.min(
-      Math.floor((endTime - startTime) / 1000),
-      session.duration
-    );
-    
-    // Convert to minutes and update user stats
-    const minutesStudied = Math.floor(timeSpentSeconds / 60);
-    if (minutesStudied > 0) {
-      user.sessionsCompleted += 1;
-      user.totalTimeStudied += minutesStudied;
-      await user.save();
+    // Handle timed sessions (calculate actual time spent)
+    if (session.isActive && session.startTime) {
+      const startTime = new Date(session.startTime);
+      const now = new Date();
+      const endTime = new Date(startTime.getTime() + session.duration * 1000);
+      
+      const actualEndTime = now > endTime ? endTime : now;
+      const timeSpentSeconds = Math.floor((actualEndTime - startTime) / 1000);
+      
+      const minutesStudied = Math.floor(timeSpentSeconds / 60);
+      if (minutesStudied > 0) {
+        user.sessionsCompleted += 1;
+        user.totalTimeStudied += minutesStudied;
+        
+        // Update the last completed session to prevent duplicates
+        user.lastCompletedSession = {
+          sessionId: sessionId,
+          completedAt: new Date()
+        };
+        
+        console.log(`Added ${minutesStudied} minutes for timed session`);
+        await user.save();
+      }
     }
   } catch (error) {
     console.error('Error updating session stats:', error);

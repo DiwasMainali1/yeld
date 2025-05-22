@@ -512,7 +512,7 @@ const MusicPlayer = () => {
             <MusicAnimations isPlaying={isPlaying} currentTrack={currentTrack} />
     
             {/* Animation keyframes */}
-            <style jsx global>{`
+            <style jsx="true" global="true">{`
                 /* Animation keyframes remain unchanged */
                 @keyframes focusPulse1 {
                     0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }

@@ -16,11 +16,14 @@ export const SessionProvider = ({ children }) => {
   // Participants state with avatar support
   const [participants, setParticipants] = useState(0);
   const [participantNames, setParticipantNames] = useState([]);
-  const [participantAvatars, setParticipantAvatars] = useState({}); // New state for avatars
+  const [participantAvatars, setParticipantAvatars] = useState({});
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
 
   // Time synchronization
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
+
+  // Session completion tracking
+  const [sessionCompleted, setSessionCompleted] = useState(false);
 
   // Check for existing session on load
   useEffect(() => {
@@ -31,7 +34,7 @@ export const SessionProvider = ({ children }) => {
   useEffect(() => {
     let intervalId;
     
-    if (isInSession && session) {
+    if (isInSession && session && !sessionCompleted) {
       intervalId = setInterval(() => {
         checkSessionStatus();
       }, 2000);
@@ -40,14 +43,12 @@ export const SessionProvider = ({ children }) => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isInSession, session]);
+  }, [isInSession, session, sessionCompleted]);
 
   const checkExistingSession = async () => {
-    console.log('🔍 Checking for existing session...');
     try {
       const token = localStorage.getItem('userToken');
       if (!token) {
-        console.log('❌ No token found');
         return;
       }
 
@@ -59,7 +60,6 @@ export const SessionProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📡 Session check response:', data);
         
         if (data.session) {
           await updateSessionState(data.session, data.userId);
@@ -88,8 +88,7 @@ export const SessionProvider = ({ children }) => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`✅ Fetched avatar for ${username}:`, data.avatar);
-        return data.avatar || 'fox'; // Default to fox if no avatar
+        return data.avatar || 'fox';
       } else {
         console.warn(`❌ Failed to fetch avatar for ${username}:`, response.status, response.statusText);
         return 'fox';
@@ -97,31 +96,26 @@ export const SessionProvider = ({ children }) => {
     } catch (error) {
       console.error('Error fetching user avatar:', error);
     }
-    return 'fox'; // Default avatar
+    return 'fox';
   };
 
   // Cache avatars to avoid repeated fetches
   const avatarCache = new Map();
 
   const getCachedAvatar = async (username) => {
-    console.log(`🔍 Getting avatar for: ${username}`);
     
     if (avatarCache.has(username)) {
       const cachedAvatar = avatarCache.get(username);
-      console.log(`💾 Using cached avatar for ${username}:`, cachedAvatar);
       return cachedAvatar;
     }
     
-    console.log(`🌐 Fetching avatar from server for: ${username}`);
     const avatar = await fetchUserAvatar(username);
     avatarCache.set(username, avatar);
-    console.log(`📥 Cached avatar for ${username}:`, avatar);
     return avatar;
   };
 
   // Update all session state from session data
   const updateSessionState = async (sessionData, userId) => {
-    console.log('🔄 Updating session state:', { sessionData, userId });
     setSession(sessionData);
     setIsInSession(true);
     
@@ -136,6 +130,9 @@ export const SessionProvider = ({ children }) => {
     setSessionStarted(sessionData.isActive);
     setSessionDuration(sessionData.duration);
     
+    // Reset completion flag when updating session state
+    setSessionCompleted(false);
+    
     // Set up participants list with avatars
     await updateParticipantsListWithAvatars(sessionData, currentUserId);
     
@@ -147,12 +144,10 @@ export const SessionProvider = ({ children }) => {
   };
 
   const updateParticipantsListWithAvatars = async (sessionData, currentUserId) => {
-    console.log('🎭 Starting updateParticipantsListWithAvatars', { sessionData, currentUserId });
     
     // Clear current user's cached avatar to ensure fresh data
     const currentUsername = localStorage.getItem('username') || 'You';
     if (avatarCache.has(currentUsername)) {
-      console.log('🗑️ Clearing cached avatar for current user to get fresh data');
       avatarCache.delete(currentUsername);
     }
     
@@ -167,29 +162,21 @@ export const SessionProvider = ({ children }) => {
     // Always add the creator with (Host) label first
     const creatorDisplayName = creatorUsername + " (Host)";
     participantsList.push(creatorDisplayName);
-    console.log('👑 Processing creator:', { creatorUsername, creatorDisplayName, isCurrentUser: sessionData.creator === currentUserId });
     
     // Get creator's avatar
     if (sessionData.creator === currentUserId) {
-      console.log('🔄 Creator is current user, fetching fresh avatar...');
-      // For current user, always fetch from server to ensure it's up to date
       const avatar = await getCachedAvatar(currentUsername);
       avatarMap[creatorDisplayName] = avatar;
       localStorage.setItem('userAvatar', avatar);
     } else if (sessionData.creatorAvatar) {
-      console.log('📡 Using creator avatar from session data:', sessionData.creatorAvatar);
-      // Use avatar from session data
       avatarMap[creatorDisplayName] = sessionData.creatorAvatar;
     } else {
-      console.log('🌐 Fetching creator avatar from server:', creatorUsername);
-      // Fetch creator's avatar
       const avatar = await getCachedAvatar(creatorUsername);
       avatarMap[creatorDisplayName] = avatar;
     }
     
     // Process participants array (if available)
     if (sessionData.participants && sessionData.participants.length > 0) {
-      console.log('👥 Processing participants:', sessionData.participants);
       for (const participantId of sessionData.participants) {
         // Skip the creator since we already added them with (Host) label
         if (participantId === sessionData.creator) {
@@ -211,22 +198,15 @@ export const SessionProvider = ({ children }) => {
         // Only add if not already in the list
         if (!participantsList.includes(participantName)) {
           participantsList.push(participantName);
-          console.log('🎭 Processing participant avatar for:', participantName, { participantId, isCurrentUser: participantId === currentUserId });
           
           // Get participant's avatar
           if (participantId === currentUserId) {
-            console.log('🔄 Participant is current user, fetching fresh avatar...');
-            // For current user, always fetch from server to ensure it's up to date
             const avatar = await getCachedAvatar(currentUsername);
             avatarMap[participantName] = avatar;
             localStorage.setItem('userAvatar', avatar);
           } else if (sessionData.participantAvatars && sessionData.participantAvatars[participantId]) {
-            console.log('📡 Using participant avatar from session data:', sessionData.participantAvatars[participantId]);
-            // Use avatar from session data
             avatarMap[participantName] = sessionData.participantAvatars[participantId];
           } else {
-            console.log('🌐 Fetching participant avatar from server:', participantName);
-            // Fetch participant's avatar
             const avatar = await getCachedAvatar(participantName);
             avatarMap[participantName] = avatar;
           }
@@ -234,14 +214,13 @@ export const SessionProvider = ({ children }) => {
       }
     }
     
-    console.log('📋 Final participants list:', participantsList);
-    console.log('🎨 Final avatar mapping:', avatarMap);
+
     setParticipantNames(participantsList);
     setParticipantAvatars(avatarMap);
   };
 
   const checkSessionStatus = useCallback(async () => {
-    if (!session) return;
+    if (!session || sessionCompleted) return;
     
     try {
       const token = localStorage.getItem('userToken');
@@ -251,13 +230,27 @@ export const SessionProvider = ({ children }) => {
         }
       });
       
+      // If session is not found (404), it means it was deleted
       if (response.status === 404) {
+        console.log('Session not found, resetting session state');
         resetSessionState();
         return;
       }
       
       if (response.ok) {
         const data = await response.json();
+        
+        // If session expired, mark as completed and reset
+        if (data.expired) {
+          console.log('Session expired, marking as completed');
+          setSessionCompleted(true);
+          
+          // Reset session state after a brief delay to allow for completion handling
+          setTimeout(() => {
+            resetSessionState();
+          }, 1000);
+          return;
+        }
         
         setParticipants(data.participants.length + 1);
         
@@ -285,6 +278,7 @@ export const SessionProvider = ({ children }) => {
         // Handle session status updates
         if (!sessionStarted && data.isActive) {
           setSessionStarted(true);
+          setSessionCompleted(false); // Reset completion flag when session starts
           
           if (data.startTime) {
             // Set session expiry for timer calculations
@@ -303,34 +297,40 @@ export const SessionProvider = ({ children }) => {
           }
         }
         
-        // Handle expired or deleted sessions
-        if (data.expired || data.deleted) {
+        // Handle deleted sessions
+        if (data.deleted) {
+          console.log('Session was deleted, resetting state');
           resetSessionState();
         }
       }
     } catch (error) {
       console.error('Error checking session status:', error);
+      // If there's a network error, don't reset the session immediately
+      // Let the user handle it manually or wait for the next check
     }
-  }, [session, sessionStarted, sessionDuration]);
+  }, [session, sessionStarted, sessionDuration, sessionCompleted]);
 
-  const resetSessionState = () => {
-    setSession(null);
-    setIsInSession(false);
-    setParticipants(0);
-    setIsCreator(false);
-    setSessionStarted(false);
-    setSessionDuration(0);
-    setSessionExpiry(null);
-    setParticipantNames([]);
-    setParticipantAvatars({});
-    // Clear avatar cache on session reset
-    console.log('🗑️ Clearing avatar cache');
-    avatarCache.clear();
-  };
+const resetSessionState = () => {
+  console.log('Resetting session state');
+  setSession(null);
+  setIsInSession(false);
+  setParticipants(0);
+  setIsCreator(false);
+  setSessionStarted(false);
+  setSessionDuration(0);
+  setSessionExpiry(null);
+  setParticipantNames([]);
+  setParticipantAvatars({});
+  setSessionCompleted(false);
+  setServerTimeOffset(0);
+  avatarCache.clear();
+  
+  localStorage.removeItem('creatorName');
+  localStorage.removeItem('userId');
+};
 
   // Function to force refresh a specific user's avatar
   const refreshUserAvatar = async (username) => {
-    console.log(`🔄 Force refreshing avatar for: ${username}`);
     avatarCache.delete(username);
     const avatar = await getCachedAvatar(username);
     
@@ -371,6 +371,7 @@ export const SessionProvider = ({ children }) => {
         setIsCreator(true);
         setSessionStarted(false);
         setSessionDuration(duration);
+        setSessionCompleted(false); // Reset completion flag
         
         // Set up initial participant list with creator
         const currentUsername = localStorage.getItem('username') || 'Host';
@@ -460,6 +461,7 @@ export const SessionProvider = ({ children }) => {
         });
         
         setSessionStarted(true);
+        setSessionCompleted(false); // Reset completion flag when starting
         
         // Set session expiry from startTime + duration
         const expiryTime = new Date(data.expiresAt);
@@ -500,6 +502,11 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
+  // Function to mark session as completed (called from Dashboard)
+  const markSessionCompleted = () => {
+    setSessionCompleted(true);
+  };
+
   return (
     <SessionContext.Provider
       value={{
@@ -507,23 +514,25 @@ export const SessionProvider = ({ children }) => {
         isInSession,
         participants,
         participantNames,
-        participantAvatars, // New avatar mapping
+        participantAvatars,
         isLoadingParticipants,
         isCreator,
         sessionStarted,
         sessionDuration,
         sessionExpiry,
         serverTimeOffset,
+        sessionCompleted,
         createSession,
         joinSession,
         startSession,
         leaveSession,
         checkSessionStatus,
-        fetchUserAvatar: getCachedAvatar, // Expose for manual avatar fetching if needed
-        refreshUserAvatar // Expose function to force refresh specific user's avatar
+        markSessionCompleted,
+        fetchUserAvatar: getCachedAvatar,
+        refreshUserAvatar
       }}
     >
       {children}
     </SessionContext.Provider>
-  );
+  )
 };

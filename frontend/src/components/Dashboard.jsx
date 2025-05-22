@@ -55,12 +55,10 @@ function Dashboard() {
     participantNames,
   } = useSession();
 
-  // Timer duration states (in seconds)
   const [pomodoroDuration, setPomodoroDuration] = useState(50 * 60);
   const [shortBreakDuration, setShortBreakDuration] = useState(10 * 60);
   const [longBreakDuration, setLongBreakDuration] = useState(60 * 60);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
-  // Timer & session states
   const [time, setTime] = useState(pomodoroDuration);
   const [isActive, setIsActive] = useState(false);
   const [timerSessionStarted, setTimerSessionStarted] = useState(false);
@@ -77,23 +75,18 @@ function Dashboard() {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [participantsList, setParticipantsList] = useState([]);
 
-  // Modal controls
   const [showEditModal, setShowEditModal] = useState(false);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
 
-  // Mobile responsive states
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // Background state
   const [background, setBackground] = useState('default');
 
-  // Temporary inputs for editing durations (in minutes)
   const [tempPomodoro, setTempPomodoro] = useState(pomodoroDuration / 60);
   const [tempShortBreak, setTempShortBreak] = useState(shortBreakDuration / 60);
   const [tempLongBreak, setTempLongBreak] = useState(longBreakDuration / 60);
 
-  // Track window size for responsive layout
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -108,14 +101,12 @@ function Dashboard() {
     };
   }, []);
 
-  // Check for session ID in URL on component mount
   useEffect(() => {
     if (sessionIdFromUrl && !isInSession) {
       joinSession(sessionIdFromUrl);
     }
   }, [sessionIdFromUrl, isInSession, joinSession]);
 
-  // When session context changes, update timer if needed
   useEffect(() => {
     if (isInSession) {
       setTime(sessionDuration);
@@ -127,28 +118,92 @@ function Dashboard() {
     }
   }, [isInSession, sessionDuration, sessionStarted, isActive]);
 
-  // Update timer if session gets started
+const sessionCompletedRef = useRef(false);
+
+// Reset completion flag when session changes
 useEffect(() => {
-  // Clear existing interval if any
+  if (session) {
+    sessionCompletedRef.current = false;
+  }
+}, [session]);
+
+const completeGroupSession = async () => {
+  try {
+    const token = localStorage.getItem('userToken');
+    const response = await fetch(`http://localhost:5000/sessions/${session._id}/complete`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.stats) {
+        setTotalTimeStudied(data.stats.totalTimeStudied);
+        setCompletedSessions(data.stats.sessionsCompleted);
+      }
+    }
+  } catch (error) {
+    console.error('Error completing session:', error);
+    // Fallback to regular stats update
+    updateUserStats(sessionDuration);
+  } finally {
+    // Always leave the session and reset timer after completion
+    await handleSessionCompletionCleanup();
+  }
+};
+
+// Add this new function to handle the cleanup after session completion:
+const handleSessionCompletionCleanup = async () => {
+  try {
+    // Leave the session using the existing context function
+    await leaveSession();
+    
+    console.log('Session completed and left successfully');
+  } catch (error) {
+    console.error('Error leaving session after completion:', error);
+  } finally {
+    // Always reset the timer state regardless of whether leaving succeeded
+    resetToUserTimer();
+  }
+};
+
+// Add this function to reset back to user's personal timer:
+  const resetToUserTimer = () => {
+    // Clear any running timers
+    if (sessionTimerRef.current) {
+      clearInterval(sessionTimerRef.current);
+      sessionTimerRef.current = null;
+    }
+    
+  // Reset all timer states to user's personal timer
+  setIsActive(false);
+  setTimerSessionStarted(false);
+  setCurrentCycleCount(0);
+  setTimerType('pomodoro');
+  setTime(pomodoroDuration);
+  
+  console.log('Timer reset to personal pomodoro timer');
+};
+
+
+useEffect(() => {
   if (sessionTimerRef.current) {
     clearInterval(sessionTimerRef.current);
     sessionTimerRef.current = null;
   }
 
-  // For group sessions, handle the timer with server-synchronized time
-  if (isInSession && sessionStarted && isActive && session) {
-
-    // Make sure we have valid date objects for calculations
+  if (isInSession && sessionStarted && isActive && session && !sessionCompletedRef.current) {
     let endTime;
     
     if (session.expiresAt) {
       endTime = new Date(session.expiresAt).getTime();
     } else if (session.startTime) {
-      // Fallback to calculating from startTime + duration if expiresAt is missing
       const startTime = new Date(session.startTime).getTime();
       endTime = startTime + (sessionDuration * 1000);
     } else {
-      // If both are missing, just use duration as countdown
       setTime(sessionDuration);
       return;
     }
@@ -166,7 +221,6 @@ useEffect(() => {
     console.log("Session end time calculated:", new Date(endTime).toISOString());
     setSessionEndTime(endTime);
 
-    // Use a fixed interval that accounts for server time offset
     sessionTimerRef.current = setInterval(() => {
       const currentTime = Date.now() + serverTimeOffset;
       const remainingTime = Math.max(
@@ -177,17 +231,25 @@ useEffect(() => {
       if (remainingTime <= 0) {
         clearInterval(sessionTimerRef.current);
         sessionTimerRef.current = null;
-        audio.play().catch((error) => console.error("Error playing alarm:", error));
-        updateUserStats(sessionDuration);
-        setTime(0);
-        setIsActive(false);
+        
+        // Prevent multiple completions
+        if (!sessionCompletedRef.current) {
+          sessionCompletedRef.current = true;
+          audio.play().catch((error) => console.error("Error playing alarm:", error));
+          
+          // Use the updated completion function
+          completeGroupSession();
+          
+          setTime(0);
+          setIsActive(false);
+        }
       } else {
         setTime(remainingTime);
       }
     }, 1000);
   }
-  // For local timer (not in a group session)
   else if (!isInSession && isActive) {
+    // Personal timer logic (unchanged)
     sessionTimerRef.current = setInterval(() => {
       setTime((prevTime) => {
         if (prevTime <= 1) {
@@ -213,19 +275,16 @@ useEffect(() => {
       sessionTimerRef.current = null;
     }
   };
-}, [isActive, isInSession, sessionStarted, session, serverTimeOffset, sessionDuration]);
+}, [isActive, isInSession, sessionStarted, session, serverTimeOffset, sessionDuration, pomodoroDuration]);
 
-  // Function to handle timer completion and cycle between timers
   const handleTimerCompletion = () => {
     setIsActive(false);
     setTimerSessionStarted(false);
 
     if (timerType === 'pomodoro') {
-      // After completing a pomodoro, handle break switching
       const newCycleCount = currentCycleCount + 1;
       setCurrentCycleCount(newCycleCount);
 
-      // After third Pomodoro, switch to long break
       if (newCycleCount % 3 === 0) {
         setTimerType('longBreak');
         setTime(longBreakDuration);
@@ -234,13 +293,11 @@ useEffect(() => {
         setTime(shortBreakDuration);
       }
     } else if (timerType === 'shortBreak' || timerType === 'longBreak') {
-      // After any break, switch back to Pomodoro
       setTimerType('pomodoro');
       setTime(pomodoroDuration);
     }
   };
 
-  // Background styles based on selection
   const renderBackground = () => {
     if (background === 'default' || !backgroundMap[background]) {
       return <div className="fixed inset-0 bg-black -z-10"></div>;
@@ -258,7 +315,6 @@ useEffect(() => {
     );
   };
 
-  // Load saved background from localStorage
   useEffect(() => {
     const savedBackground = localStorage.getItem('background');
     if (savedBackground) {
@@ -266,12 +322,10 @@ useEffect(() => {
     }
   }, []);
 
-  // Save background to localStorage when changed
   useEffect(() => {
     localStorage.setItem('background', background);
   }, [background]);
 
-  // Update participantsList when participantNames changes
   useEffect(() => {
     setParticipantsList(participantNames || []);
   }, [participantNames]);
@@ -380,11 +434,9 @@ useEffect(() => {
 
   const toggleTimer = () => {
     if (isInSession && !sessionStarted && isCreator) {
-      // Start group session with loading indicator
       setIsLoadingSession(true);
       startSession().then((response) => {
         if (response) {
-          // Calculate server time offset from response
           if (response.serverTime) {
             const serverTime = new Date(response.serverTime).getTime();
             const clientTime = Date.now();
@@ -393,7 +445,6 @@ useEffect(() => {
             console.log("Server time offset set to:", offset);
           }
 
-          // Set session end time if available
           if (response.expiresAt) {
             const serverEndTime = new Date(response.expiresAt).getTime();
             setSessionEndTime(serverEndTime);
@@ -408,13 +459,13 @@ useEffect(() => {
         setIsLoadingSession(false);
       });
     } else if (!isInSession) {
-      // Regular timer toggle
       if (!isActive && !timerSessionStarted) {
         setTimerSessionStarted(true);
       }
       setIsActive(!isActive);
     }
   };
+
   const resetTimer = () => {
     if (isInSession && sessionStarted) {
       return;
@@ -473,7 +524,6 @@ useEffect(() => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Show modal to edit all timer settings
   const handleOpenEditModal = () => {
     if (isInSession && sessionStarted) {
       return;
@@ -484,7 +534,6 @@ useEffect(() => {
     setShowEditModal(true);
   };
 
-  // Save the updated timer settings
   const handleSaveTimerSettings = async () => {
     const newPomodoro = tempPomodoro * 60;
     const newShortBreak = tempShortBreak * 60;
@@ -494,14 +543,12 @@ useEffect(() => {
     setShortBreakDuration(newShortBreak);
     setLongBreakDuration(newLongBreak);
 
-    // If the timer isn't running, update the displayed time too
     if (!timerSessionStarted && !isInSession) {
       if (timerType === 'pomodoro') setTime(newPomodoro);
       else if (timerType === 'shortBreak') setTime(newShortBreak);
       else if (timerType === 'longBreak') setTime(newLongBreak);
     }
 
-    // Save to backend
     try {
       const token = localStorage.getItem('userToken');
       const response = await fetch("http://localhost:5000/profile/update", {
@@ -532,7 +579,6 @@ useEffect(() => {
     setShowEditModal(false);
   };
 
-  // Background selection handlers
   const handleOpenBackgroundModal = () => {
     setShowBackgroundModal(true);
   };
@@ -565,7 +611,6 @@ useEffect(() => {
     }
   };
 
-  // Handle exiting a session
   const handleExitSession = async () => {
     if (
       window.confirm(
@@ -626,7 +671,6 @@ useEffect(() => {
     setShowMobileMenu(!showMobileMenu);
   };
 
-  // Determine if mobile layout should be used
   const isMobile = windowWidth < 768;
   const isSmallScreen = windowWidth < 1024;
   const isExtraSmallScreen = windowWidth < 640;
@@ -793,7 +837,6 @@ useEffect(() => {
                   </button>
                 )}
 
-                {/* Only show reset button when NOT in any session */}
                 {!isInSession && (
                   <button
                     onClick={resetTimer}
@@ -848,6 +891,7 @@ useEffect(() => {
                 {(!isInSession || !sessionStarted) && (
                   <button
                     onClick={handleOpenEditModal}
+                    disabled={isInSession}
                     className={`flex items-center gap-2 bg-zinc-900/30 text-white py-1 px-2 sm:py-2 sm:px-4 rounded-xl font-semibold hover:bg-zinc-800 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25 ${
                       isExtraSmallScreen ? "text-xs" : "text-sm"
                     }`}
