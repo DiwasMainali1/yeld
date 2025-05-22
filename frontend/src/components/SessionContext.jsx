@@ -13,9 +13,10 @@ export const SessionProvider = ({ children }) => {
   const [sessionDuration, setSessionDuration] = useState(0);
   const [sessionExpiry, setSessionExpiry] = useState(null);
   
-  // Participants state
+  // Participants state with avatar support
   const [participants, setParticipants] = useState(0);
   const [participantNames, setParticipantNames] = useState([]);
+  const [participantAvatars, setParticipantAvatars] = useState({}); // New state for avatars
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
 
   // Time synchronization
@@ -42,9 +43,13 @@ export const SessionProvider = ({ children }) => {
   }, [isInSession, session]);
 
   const checkExistingSession = async () => {
+    console.log('🔍 Checking for existing session...');
     try {
       const token = localStorage.getItem('userToken');
-      if (!token) return;
+      if (!token) {
+        console.log('❌ No token found');
+        return;
+      }
 
       const response = await fetch('http://localhost:5000/sessions/check', {
         headers: {
@@ -54,9 +59,10 @@ export const SessionProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('📡 Session check response:', data);
         
         if (data.session) {
-          updateSessionState(data.session, data.userId);
+          await updateSessionState(data.session, data.userId);
         }
       }
     } catch (error) {
@@ -64,8 +70,58 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
+  // Fetch user avatar by username
+  const fetchUserAvatar = async (username) => {
+    try {
+      const token = localStorage.getItem('userToken');
+      if (!token || !username) {
+        console.warn('Missing token or username for avatar fetch');
+        return 'fox';
+      }
+
+      const response = await fetch(`http://localhost:5000/profile/${username}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ Fetched avatar for ${username}:`, data.avatar);
+        return data.avatar || 'fox'; // Default to fox if no avatar
+      } else {
+        console.warn(`❌ Failed to fetch avatar for ${username}:`, response.status, response.statusText);
+        return 'fox';
+      }
+    } catch (error) {
+      console.error('Error fetching user avatar:', error);
+    }
+    return 'fox'; // Default avatar
+  };
+
+  // Cache avatars to avoid repeated fetches
+  const avatarCache = new Map();
+
+  const getCachedAvatar = async (username) => {
+    console.log(`🔍 Getting avatar for: ${username}`);
+    
+    if (avatarCache.has(username)) {
+      const cachedAvatar = avatarCache.get(username);
+      console.log(`💾 Using cached avatar for ${username}:`, cachedAvatar);
+      return cachedAvatar;
+    }
+    
+    console.log(`🌐 Fetching avatar from server for: ${username}`);
+    const avatar = await fetchUserAvatar(username);
+    avatarCache.set(username, avatar);
+    console.log(`📥 Cached avatar for ${username}:`, avatar);
+    return avatar;
+  };
+
   // Update all session state from session data
-  const updateSessionState = (sessionData, userId) => {
+  const updateSessionState = async (sessionData, userId) => {
+    console.log('🔄 Updating session state:', { sessionData, userId });
     setSession(sessionData);
     setIsInSession(true);
     
@@ -80,8 +136,8 @@ export const SessionProvider = ({ children }) => {
     setSessionStarted(sessionData.isActive);
     setSessionDuration(sessionData.duration);
     
-    // Set up participants list
-    updateParticipantsList(sessionData, currentUserId);
+    // Set up participants list with avatars
+    await updateParticipantsListWithAvatars(sessionData, currentUserId);
     
     // If session is already active, set the expiry time
     if (sessionData.isActive && sessionData.startTime) {
@@ -90,24 +146,54 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
-  const updateParticipantsList = (sessionData, currentUserId) => {
-    const participantsList = [];
-    const currentUsername = localStorage.getItem('username') || 'You';
+  const updateParticipantsListWithAvatars = async (sessionData, currentUserId) => {
+    console.log('🎭 Starting updateParticipantsListWithAvatars', { sessionData, currentUserId });
     
-    // Determine creator's display name
+    // Clear current user's cached avatar to ensure fresh data
+    const currentUsername = localStorage.getItem('username') || 'You';
+    if (avatarCache.has(currentUsername)) {
+      console.log('🗑️ Clearing cached avatar for current user to get fresh data');
+      avatarCache.delete(currentUsername);
+    }
+    
+    const participantsList = [];
+    const avatarMap = {};
+    
+    // Determine creator's display name and avatar
     const creatorUsername = sessionData.creator === currentUserId 
       ? currentUsername 
       : (sessionData.creatorUsername || localStorage.getItem('creatorName') || 'Unknown');
     
     // Always add the creator with (Host) label first
-    participantsList.push(creatorUsername + " (Host)");
+    const creatorDisplayName = creatorUsername + " (Host)";
+    participantsList.push(creatorDisplayName);
+    console.log('👑 Processing creator:', { creatorUsername, creatorDisplayName, isCurrentUser: sessionData.creator === currentUserId });
+    
+    // Get creator's avatar
+    if (sessionData.creator === currentUserId) {
+      console.log('🔄 Creator is current user, fetching fresh avatar...');
+      // For current user, always fetch from server to ensure it's up to date
+      const avatar = await getCachedAvatar(currentUsername);
+      avatarMap[creatorDisplayName] = avatar;
+      localStorage.setItem('userAvatar', avatar);
+    } else if (sessionData.creatorAvatar) {
+      console.log('📡 Using creator avatar from session data:', sessionData.creatorAvatar);
+      // Use avatar from session data
+      avatarMap[creatorDisplayName] = sessionData.creatorAvatar;
+    } else {
+      console.log('🌐 Fetching creator avatar from server:', creatorUsername);
+      // Fetch creator's avatar
+      const avatar = await getCachedAvatar(creatorUsername);
+      avatarMap[creatorDisplayName] = avatar;
+    }
     
     // Process participants array (if available)
     if (sessionData.participants && sessionData.participants.length > 0) {
-      sessionData.participants.forEach(participantId => {
+      console.log('👥 Processing participants:', sessionData.participants);
+      for (const participantId of sessionData.participants) {
         // Skip the creator since we already added them with (Host) label
         if (participantId === sessionData.creator) {
-          return;
+          continue;
         }
         
         let participantName;
@@ -125,12 +211,33 @@ export const SessionProvider = ({ children }) => {
         // Only add if not already in the list
         if (!participantsList.includes(participantName)) {
           participantsList.push(participantName);
+          console.log('🎭 Processing participant avatar for:', participantName, { participantId, isCurrentUser: participantId === currentUserId });
+          
+          // Get participant's avatar
+          if (participantId === currentUserId) {
+            console.log('🔄 Participant is current user, fetching fresh avatar...');
+            // For current user, always fetch from server to ensure it's up to date
+            const avatar = await getCachedAvatar(currentUsername);
+            avatarMap[participantName] = avatar;
+            localStorage.setItem('userAvatar', avatar);
+          } else if (sessionData.participantAvatars && sessionData.participantAvatars[participantId]) {
+            console.log('📡 Using participant avatar from session data:', sessionData.participantAvatars[participantId]);
+            // Use avatar from session data
+            avatarMap[participantName] = sessionData.participantAvatars[participantId];
+          } else {
+            console.log('🌐 Fetching participant avatar from server:', participantName);
+            // Fetch participant's avatar
+            const avatar = await getCachedAvatar(participantName);
+            avatarMap[participantName] = avatar;
+          }
         }
-      });
+      }
     }
     
-    console.log('Final participantsList:', participantsList);
+    console.log('📋 Final participants list:', participantsList);
+    console.log('🎨 Final avatar mapping:', avatarMap);
     setParticipantNames(participantsList);
+    setParticipantAvatars(avatarMap);
   };
 
   const checkSessionStatus = useCallback(async () => {
@@ -143,10 +250,12 @@ export const SessionProvider = ({ children }) => {
           'Authorization': `Bearer ${token}`
         }
       });
+      
       if (response.status === 404) {
         resetSessionState();
         return;
       }
+      
       if (response.ok) {
         const data = await response.json();
         
@@ -162,13 +271,15 @@ export const SessionProvider = ({ children }) => {
           localStorage.setItem('creatorName', data.creatorUsername);
         }
         
-        // Update participants list with full data
+        // Update participants list with full data including avatars
         const currentUserId = localStorage.getItem('userId');
-        updateParticipantsList({
+        await updateParticipantsListWithAvatars({
           ...session,
           participants: data.participants,
           participantUsernames: data.participantUsernames,
-          creatorUsername: data.creatorUsername
+          creatorUsername: data.creatorUsername,
+          participantAvatars: data.participantAvatars,
+          creatorAvatar: data.creatorAvatar
         }, currentUserId);
         
         // Handle session status updates
@@ -211,6 +322,26 @@ export const SessionProvider = ({ children }) => {
     setSessionDuration(0);
     setSessionExpiry(null);
     setParticipantNames([]);
+    setParticipantAvatars({});
+    // Clear avatar cache on session reset
+    console.log('🗑️ Clearing avatar cache');
+    avatarCache.clear();
+  };
+
+  // Function to force refresh a specific user's avatar
+  const refreshUserAvatar = async (username) => {
+    console.log(`🔄 Force refreshing avatar for: ${username}`);
+    avatarCache.delete(username);
+    const avatar = await getCachedAvatar(username);
+    
+    // Update the avatar in current participants list if present
+    setParticipantAvatars(prev => ({
+      ...prev,
+      [username]: avatar,
+      [`${username} (Host)`]: avatar // Also update if they're a host
+    }));
+    
+    return avatar;
   };
 
   const createSession = async (duration) => {
@@ -241,7 +372,20 @@ export const SessionProvider = ({ children }) => {
         setSessionStarted(false);
         setSessionDuration(duration);
         
-        setParticipantNames(["Host"]);
+        // Set up initial participant list with creator
+        const currentUsername = localStorage.getItem('username') || 'Host';
+        const creatorDisplayName = currentUsername + " (Host)";
+        setParticipantNames([creatorDisplayName]);
+        
+        // Get creator's avatar
+        const savedAvatar = localStorage.getItem('userAvatar');
+        if (savedAvatar) {
+          setParticipantAvatars({ [creatorDisplayName]: savedAvatar });
+        } else {
+          const avatar = await getCachedAvatar(currentUsername);
+          setParticipantAvatars({ [creatorDisplayName]: avatar });
+          localStorage.setItem('userAvatar', avatar);
+        }
         
         // Return session ID to be used for link creation
         return data._id;
@@ -274,7 +418,7 @@ export const SessionProvider = ({ children }) => {
           localStorage.setItem('creatorName', data.creatorUsername);
         }
         
-        updateSessionState(data, data.userId);
+        await updateSessionState(data, data.userId);
         return data;
       }
       return false;
@@ -363,6 +507,7 @@ export const SessionProvider = ({ children }) => {
         isInSession,
         participants,
         participantNames,
+        participantAvatars, // New avatar mapping
         isLoadingParticipants,
         isCreator,
         sessionStarted,
@@ -373,7 +518,9 @@ export const SessionProvider = ({ children }) => {
         joinSession,
         startSession,
         leaveSession,
-        checkSessionStatus
+        checkSessionStatus,
+        fetchUserAvatar: getCachedAvatar, // Expose for manual avatar fetching if needed
+        refreshUserAvatar // Expose function to force refresh specific user's avatar
       }}
     >
       {children}

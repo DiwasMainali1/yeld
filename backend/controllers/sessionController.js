@@ -35,7 +35,8 @@ export const createSession = async (req, res) => {
     res.status(201).json({
       _id: session._id,
       duration: session.duration,
-      participants: []
+      participants: [],
+      userId: req.user._id.toString() // Add userId for client-side tracking
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -77,6 +78,26 @@ export const checkSession = async (req, res) => {
       return res.json({ session: null });
     }
     
+    // Get creator information with avatar
+    const creator = await User.findById(session.creator).select('username avatar');
+    const creatorUsername = creator ? creator.username : 'Unknown User';
+    const creatorAvatar = creator ? (creator.avatar || 'fox') : 'fox';
+    
+    // Get participant information with avatars
+    let participantUsernames = {};
+    let participantAvatars = {};
+    
+    if (session.participants && session.participants.length > 0) {
+      const users = await User.find({
+        _id: { $in: session.participants }
+      }).select('_id username avatar');
+      
+      users.forEach(user => {
+        participantUsernames[user._id.toString()] = user.username;
+        participantAvatars[user._id.toString()] = user.avatar || 'fox';
+      });
+    }
+    
     res.json({
       session: {
         _id: session._id,
@@ -84,9 +105,13 @@ export const checkSession = async (req, res) => {
         participants: session.participants,
         duration: session.duration,
         isActive: session.isActive,
-        startTime: session.startTime
+        startTime: session.startTime,
+        creatorUsername,
+        creatorAvatar,
+        participantUsernames,
+        participantAvatars
       },
-      userId: req.user._id
+      userId: req.user._id.toString()
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -123,36 +148,42 @@ export const joinSession = async (req, res) => {
       return res.status(400).json({ message: 'You are already in another session' });
     }
     
-    // Get creator information
-    const creator = await User.findById(session.creator);
+    // Get creator information with avatar
+    const creator = await User.findById(session.creator).select('username avatar');
     const creatorUsername = creator ? creator.username : 'Unknown User';
+    const creatorAvatar = creator ? (creator.avatar || 'fox') : 'fox';
     
-    // Get participant information
+    // Get participant information with avatars
     let participantUsernames = {};
+    let participantAvatars = {};
     
     if (session.participants && session.participants.length > 0) {
       const users = await User.find({
         _id: { $in: session.participants }
-      }).select('_id username');
+      }).select('_id username avatar');
       
       users.forEach(user => {
         participantUsernames[user._id.toString()] = user.username;
+        participantAvatars[user._id.toString()] = user.avatar || 'fox';
       });
     }
     
-    // If user is the creator, just return the session
+    // If user is the creator, just return the session with avatar data
     if (session.creator.equals(req.user._id)) {
       return res.json({
         _id: session._id,
         creator: session.creator,
         creatorUsername,
+        creatorAvatar,
         participants: session.participants,
         participantUsernames,
+        participantAvatars,
         duration: session.duration,
         isActive: session.isActive,
         startTime: session.startTime,
         expiresAt: session.expiresAt,
-        serverTime: new Date()
+        serverTime: new Date(),
+        userId: req.user._id.toString()
       });
     }
     
@@ -161,8 +192,9 @@ export const joinSession = async (req, res) => {
       session.participants.push(req.user._id);
       await session.save();
       
-      // Add the new participant to the usernames object
+      // Add the new participant to the usernames and avatars objects
       participantUsernames[req.user._id.toString()] = req.user.username;
+      participantAvatars[req.user._id.toString()] = req.user.avatar || 'fox';
     }
     
     // Calculate expiresAt if session is active but missing this field
@@ -176,14 +208,16 @@ export const joinSession = async (req, res) => {
       _id: session._id,
       creator: session.creator,
       creatorUsername,
+      creatorAvatar,
       participants: session.participants,
       participantUsernames,
+      participantAvatars,
       duration: session.duration,
       isActive: session.isActive,
       startTime: session.startTime,
       expiresAt: expiresAt,
       serverTime: new Date(),
-      userId: req.user._id
+      userId: req.user._id.toString()
     });
   } catch (error) {
     console.error('Error in joinSession:', error);
@@ -351,20 +385,23 @@ export const getSessionStatus = async (req, res) => {
       });
     }
 
-    // Get creator information
-    const creator = await User.findById(session.creator);
+    // Get creator information with avatar
+    const creator = await User.findById(session.creator).select('username avatar');
     const creatorUsername = creator ? creator.username : 'Unknown User';
+    const creatorAvatar = creator ? (creator.avatar || 'fox') : 'fox';
     
-    // Get participant usernames
+    // Get participant usernames and avatars
     let participantUsernames = {};
+    let participantAvatars = {};
     
     if (session.participants && session.participants.length > 0) {
       const users = await User.find({
         _id: { $in: session.participants }
-      }).select('_id username');
+      }).select('_id username avatar');
       
       users.forEach(user => {
         participantUsernames[user._id.toString()] = user.username;
+        participantAvatars[user._id.toString()] = user.avatar || 'fox';
       });
     }
     
@@ -380,7 +417,9 @@ export const getSessionStatus = async (req, res) => {
     res.json({
       participants: session.participants,
       participantUsernames,
+      participantAvatars, // Include participant avatars
       creatorUsername,
+      creatorAvatar, // Include creator avatar
       creator: session.creator,
       isActive: session.isActive,
       startTime: session.startTime,
