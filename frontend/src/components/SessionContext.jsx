@@ -92,13 +92,7 @@ export const SessionProvider = ({ children }) => {
 
   // Function to update participants list
   const updateParticipantsList = (sessionData, currentUserId) => {
-    console.log("Updating participants list with data:", {
-      creator: sessionData.creator,
-      participants: sessionData.participants,
-      currentUserId,
-      participantUsernames: sessionData.participantUsernames || {}
-    });
-    
+
     // Create a new empty array for the participant list
     const participantsList = [];
     const currentUsername = localStorage.getItem('username') || 'You';
@@ -139,7 +133,6 @@ export const SessionProvider = ({ children }) => {
       });
     }
     
-    console.log("Final participants list:", participantsList);
     setParticipantNames(participantsList);
   };
 

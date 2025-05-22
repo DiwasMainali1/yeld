@@ -137,12 +137,7 @@ useEffect(() => {
 
   // For group sessions, handle the timer with server-synchronized time
   if (isInSession && sessionStarted && isActive && session) {
-    console.log("Setting up group session timer with data:", {
-      startTime: session.startTime,
-      expiresAt: session.expiresAt,
-      duration: sessionDuration
-    });
-    
+
     // Make sure we have valid date objects for calculations
     let endTime;
     
@@ -178,12 +173,6 @@ useEffect(() => {
         0,
         Math.floor((endTime - currentTime) / 1000)
       );
-      
-      console.log("Timer calculation:", {
-        currentTime: new Date(currentTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        remainingTime
-      });
 
       if (remainingTime <= 0) {
         clearInterval(sessionTimerRef.current);
@@ -674,6 +663,10 @@ useEffect(() => {
               </button>
               <button
                 onClick={() => {
+                  if (timerSessionStarted) {
+                    handleExitSession();
+                    console.log('Exited!')
+                  }
                   toggleMobileMenu();
                   navigateWithConfirmation(`/profile/${username}`);
                 }}
@@ -977,21 +970,6 @@ useEffect(() => {
         currentBackground={background}
         isSmallScreen={isExtraSmallScreen}
       />
-
-      {isInSession && (
-        <div className="flex justify-center mb-4 md:mb-6">
-          <button
-            onClick={() => setShowParticipantsModal(true)}
-            className="flex items-center gap-2 bg-zinc-900/50 px-4 py-2 rounded-xl hover:bg-zinc-900 transition-colors"
-          >
-            <Users className="w-5 h-5 text-green-400" />
-            <span className="text-white">
-              {participants}{" "}
-              {participants === 1 ? "Participant" : "Participants"}
-            </span>
-          </button>
-        </div>
-      )}
       <SessionParticipantsModal
         isOpen={showParticipantsModal}
         onClose={() => setShowParticipantsModal(false)}

@@ -113,7 +113,7 @@ const GroupSession = ({ handleExitSession }) => {
 
   if (isInSession) {
     return (
-      <div className="mt-4 bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+      <div className="mt-4 bg-zinc-900/30 rounded-xl p-4 border border-zinc-800">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-green-400" />
@@ -167,7 +167,7 @@ const GroupSession = ({ handleExitSession }) => {
                 />
                 <button 
                   onClick={copyToClipboard}
-                  className="bg-zinc-700 hover:bg-zinc-600 px-2 py-1 rounded text-xs"
+                  className="bg-zinc-700/30 hover:bg-zinc-600/30 px-2 py-1 rounded text-xs"
                 >
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
