@@ -22,6 +22,7 @@ import masterGif from './pet-components/pet-assets/master.gif';
 import masterIdlePng from './pet-components/pet-assets/master-idle.png';
 
 import PetModal from './pet-components/PetModal';
+import PetSelectionModal from './pet-components/PetSelectionModal'; // New component
 
 const animalAvatars = {
   fox: foxImage,
@@ -82,6 +83,12 @@ function Header({ username, isTimerActive }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [showPetModal, setShowPetModal] = useState(false);
+    const [showPetSelectionModal, setShowPetSelectionModal] = useState(false);
+    
+    // Pet state management
+    const [hasHatchedPet, setHasHatchedPet] = useState(false);
+    const [unlockedPets, setUnlockedPets] = useState([]);
+    const [activePet, setActivePet] = useState(null);
     
     const [birdVisible, setBirdVisible] = useState(false);
     const [birdPosition, setBirdPosition] = useState({ x: 200, y: 200 });
@@ -106,8 +113,41 @@ function Header({ username, isTimerActive }) {
 
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
-    // Get current bird assets based on rank
+    // Load pet data from localStorage on mount
+    useEffect(() => {
+        const savedPetData = localStorage.getItem(`petData_${username}`);
+        if (savedPetData) {
+            const petData = JSON.parse(savedPetData);
+            setHasHatchedPet(petData.hasHatched || false);
+            setUnlockedPets(petData.unlockedPets || []);
+            setActivePet(petData.activePet || null);
+            
+            // If there's an active pet, show it
+            if (petData.activePet && petData.hasHatched) {
+                setBirdVisible(true);
+            }
+        }
+    }, [username]);
+
+    // Save pet data whenever it changes
+    useEffect(() => {
+        if (username) {
+            const petData = {
+                hasHatched: hasHatchedPet,
+                unlockedPets: unlockedPets,
+                activePet: activePet
+            };
+            localStorage.setItem(`petData_${username}`, JSON.stringify(petData));
+        }
+    }, [hasHatchedPet, unlockedPets, activePet, username]);
+
+    // Get current bird assets based on rank or active pet
     const getCurrentBirdAssets = () => {
+        // If there's a specific active pet selected, use that
+        if (activePet && birdAssets[activePet]) {
+            return birdAssets[activePet];
+        }
+        // Otherwise use rank-based pet
         return birdAssets[userRank] || birdAssets.novice;
     };
 
@@ -116,7 +156,7 @@ function Header({ username, isTimerActive }) {
         const assets = getCurrentBirdAssets();
         
         // For master rank, only show gif when selected, no movement
-        if (userRank === 'master') {
+        if (userRank === 'master' || (activePet === 'master')) {
             return birdSelected ? assets.gif : assets.idle;
         }
         
@@ -132,6 +172,31 @@ function Header({ username, isTimerActive }) {
         if (totalHours >= 5) return 'apprentice';
         return 'novice';
     };
+
+    // Update unlocked pets based on rank
+    useEffect(() => {
+        const newUnlockedPets = ['novice']; // Always have novice unlocked
+        
+        if (userRank === 'apprentice' || userRank === 'scholar' || userRank === 'sage' || userRank === 'master') {
+            newUnlockedPets.push('apprentice');
+        }
+        if (userRank === 'scholar' || userRank === 'sage' || userRank === 'master') {
+            newUnlockedPets.push('scholar');
+        }
+        if (userRank === 'sage' || userRank === 'master') {
+            newUnlockedPets.push('sage');
+        }
+        if (userRank === 'master') {
+            newUnlockedPets.push('master');
+        }
+        
+        setUnlockedPets(newUnlockedPets);
+        
+        // If no active pet is set, set it to the current rank
+        if (!activePet && hasHatchedPet) {
+            setActivePet(userRank);
+        }
+    }, [userRank, activePet, hasHatchedPet]);
 
     // Start idle animations when bird is visible and not moving/selected
     useEffect(() => {
@@ -193,7 +258,8 @@ function Header({ username, isTimerActive }) {
 
     useEffect(() => {
         // Skip movement animation for master rank
-        if (userRank === 'master' || !birdTarget || !isMoving) return;
+        const currentPetRank = activePet || userRank;
+        if (currentPetRank === 'master' || !birdTarget || !isMoving) return;
 
         const startPosition = { ...birdPosition };
         const targetPosition = { ...birdTarget };
@@ -245,13 +311,14 @@ function Header({ username, isTimerActive }) {
             setShowTrail(false);
             setTrailPositions([]);
         };
-    }, [birdTarget, isMoving, birdPosition, MOVEMENT_SPEED, userRank]);
+    }, [birdTarget, isMoving, birdPosition, MOVEMENT_SPEED, userRank, activePet]);
 
     useEffect(() => {
         const handlePageClick = (e) => {
+            const currentPetRank = activePet || userRank;
             if (birdSelected && birdRef.current && !birdRef.current.contains(e.target)) {
                 // For master rank, don't allow movement - just deselect
-                if (userRank === 'master') {
+                if (currentPetRank === 'master') {
                     setBirdSelected(false);
                     return;
                 }
@@ -277,13 +344,17 @@ function Header({ username, isTimerActive }) {
         return () => {
             document.removeEventListener('click', handlePageClick);
         };
-    }, [birdSelected, birdVisible, isMoving, userRank]);
+    }, [birdSelected, birdVisible, isMoving, userRank, activePet]);
 
     const handleEggClick = () => {
         console.log('Egg clicked! Spawning bird...');
+        setHasHatchedPet(true);
         setBirdVisible(true);
         setBirdPosition({ x: 200, y: 150 }); 
-        setShowPetModal(false); 
+        setShowPetModal(false);
+        
+        // Set the active pet to the current rank
+        setActivePet(userRank);
     };
 
     const handleBirdClick = (e) => {
@@ -291,6 +362,21 @@ function Header({ username, isTimerActive }) {
         if (!isMoving) {
             setBirdSelected(!birdSelected);
         }
+    };
+
+    const handlePetIconClick = () => {
+        if (unlockedPets.length > 1) {
+            setShowPetSelectionModal(true);
+        } else {
+            // Toggle bird visibility if only one pet
+            setBirdVisible(!birdVisible);
+        }
+    };
+
+    const handlePetSelection = (selectedPet) => {
+        setActivePet(selectedPet);
+        setBirdVisible(true);
+        setShowPetSelectionModal(false);
     };
 
     // Get idle animation classes
@@ -469,20 +555,58 @@ function Header({ username, isTimerActive }) {
                     )}
                 </div>
                 {isMobile && (
-                    <button
-                        onClick={handleSilverEgg}
-                        className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
-                    >
-                    </button>
+                    hasHatchedPet ? (
+                        <button
+                            onClick={handlePetIconClick}
+                            className="relative w-10 h-10 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg"
+                        >
+                            <img 
+                                src={getCurrentBirdAssets().idle} 
+                                alt="Pet"
+                                className="w-8 h-8 object-contain"
+                                style={{ imageRendering: 'crisp-edges' }}
+                            />
+                            {unlockedPets.length > 1 && (
+                                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
+                                    {unlockedPets.length}
+                                </span>
+                            )}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleSilverEgg}
+                            className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
+                        >
+                        </button>
+                    )
                 )}
                 
                 {!isMobile && (
                     <div className="flex flex-row gap-4 items-center">
-                        <button
-                        onClick={handleSilverEgg}
-                        className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
-                        >
-                        </button>
+                        {hasHatchedPet ? (
+                            <button
+                                onClick={handlePetIconClick}
+                                className="relative w-10 h-10 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg"
+                            >
+                                <img 
+                                    src={getCurrentBirdAssets().idle} 
+                                    alt="Pet"
+                                    className="w-8 h-8 object-contain"
+                                    style={{ imageRendering: 'crisp-edges' }}
+                                />
+                                {unlockedPets.length > 1 && (
+                                    <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
+                                        {unlockedPets.length}
+                                    </span>
+                                )}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleSilverEgg}
+                                className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
+                            >
+                            </button>
+                        )}
                         <button
                             className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                             onClick={toggleLeaderboard}
@@ -516,7 +640,7 @@ function Header({ username, isTimerActive }) {
 
             {birdVisible && (
                 <>
-                    {showTrail && userRank !== 'master' && trailPositions.map((pos, index) => (
+                    {showTrail && (activePet !== 'master' && userRank !== 'master') && trailPositions.map((pos, index) => (
                         <div
                             key={index}
                             className="fixed z-30 pointer-events-none"
@@ -542,11 +666,11 @@ function Header({ username, isTimerActive }) {
                         onClick={handleBirdClick}
                         className={`fixed z-40 cursor-pointer transition-all duration-200 ${
                             !isMoving ? 'hover:scale-120' : 'scale-120'
-                        } ${isMoving && userRank !== 'master' ? 'animate-bounce' : getIdleAnimationClass()}`}
+                        } ${isMoving && (activePet !== 'master' && userRank !== 'master') ? 'animate-bounce' : getIdleAnimationClass()}`}
                         style={{
                             left: `${birdPosition.x}px`,
                             top: `${birdPosition.y}px`,
-                            transform: userRank !== 'master' ? `rotate(${birdRotation}deg)` : 'rotate(0deg)',
+                            transform: (activePet !== 'master' && userRank !== 'master') ? `rotate(${birdRotation}deg)` : 'rotate(0deg)',
                             transition: isMoving ? 'none' : 'transform 0.3s ease-out',
                         }}
                     >
@@ -554,7 +678,7 @@ function Header({ username, isTimerActive }) {
                         src={getBirdImage()}
                         alt={getCurrentBirdAssets().name}
                         className={`${getBirdImage().includes('.gif') ? 'w-44 h-44' : 'w-36 h-36'} object-contain pointer-events-none ${
-                            isMoving && userRank !== 'master' ? 'animate-pulse' : ''
+                            isMoving && (activePet !== 'master' && userRank !== 'master') ? 'animate-pulse' : ''
                         }`}
                         draggable={false}
                         style={{
@@ -578,19 +702,19 @@ function Header({ username, isTimerActive }) {
                             </div>
                         )}
                         
-                        {birdSelected && !isMoving && userRank !== 'master' && (
+                        {birdSelected && !isMoving && (activePet !== 'master') && (
                             <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black text-xs px-2 py-1 rounded whitespace-nowrap">
                                 Time to fly!
                             </div>
                         )}
                         
-                        {birdSelected && userRank === 'master' && (
+                        {birdSelected && (activePet === 'master') && (
                             <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-rose-400 via-purple-400 to-blue-400 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
                                 Majestic Master!
                             </div>
                         )}
                         
-                        {isMoving && userRank !== 'master' && (
+                        {isMoving && (activePet !== 'master') && (
                             <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 flex items-center gap-1">
                                 <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs px-2 py-1 rounded-full animate-pulse">
                                     WOOOO!
@@ -667,11 +791,23 @@ function Header({ username, isTimerActive }) {
                 isOpen={showLeaderboard} 
                 onClose={() => setShowLeaderboard(false)} 
             />
-            <PetModal
-                isOpen={showPetModal}
-                onClose={() => setShowPetModal(false)}
-                onEggClick={handleEggClick}
-            />
+            {!hasHatchedPet && (
+                <PetModal
+                    isOpen={showPetModal}
+                    onClose={() => setShowPetModal(false)}
+                    onEggClick={handleEggClick}
+                />
+            )}
+            {showPetSelectionModal && (
+                <PetSelectionModal
+                    isOpen={showPetSelectionModal}
+                    onClose={() => setShowPetSelectionModal(false)}
+                    unlockedPets={unlockedPets}
+                    activePet={activePet}
+                    onSelectPet={handlePetSelection}
+                    birdAssets={birdAssets}
+                />
+            )}
         </>
     );
 }
