@@ -3,11 +3,11 @@ import { X, Crown, Users } from 'lucide-react';
 import { useSession } from './SessionContext';
 
 // Import animal avatar images
-import foxImage from '../assets/fox.png';
-import owlImage from '../assets/owl.png';
-import pandaImage from '../assets/panda.png';
-import penguinImage from '../assets/penguin.png';
-import koalaImage from '../assets/koala.png';
+import foxImage from '../../assets/fox.png';
+import owlImage from '../../assets/owl.png';
+import pandaImage from '../../assets/panda.png';
+import penguinImage from '../../assets/penguin.png';
+import koalaImage from '../../assets/koala.png';
 
 const animalAvatars = {
   fox: foxImage,

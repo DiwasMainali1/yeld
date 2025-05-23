@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Trophy, Menu, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import LeaderboardModal from './LeaderboardModal';
+import LeaderboardModal from './custom-components/LeaderboardModal';
 
 // Import animal avatar images
 import foxImage from '../assets/fox.png';

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, Music, Volume2, ChevronDown, X } from 'lucide-react';
-import focusAudio from '../music/focus-music.mp3';
-import classicalAudio from '../music/classical-music.mp3';
-import ghibliAudio from '../music/ghibli-music.mp3';
-import windRisesAudio from '../music/wind-rises.mp3';
-import ambienceAudio from '../music/ambient-music.mp3'; 
+import focusAudio from '../../music/focus-music.mp3';
+import classicalAudio from '../../music/classical-music.mp3';
+import ghibliAudio from '../../music/ghibli-music.mp3';
+import windRisesAudio from '../../music/wind-rises.mp3';
+import ambienceAudio from '../../music/ambient-music.mp3'; 
 
 const VolumeControl = React.memo(({ volume, onVolumeChange }) => {
   const handleChange = (e) => {

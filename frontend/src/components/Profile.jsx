@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, Trophy, Timer, Calendar, List } from 'lucide-react';
 import Header from './Header';
-import TaskHistoryModal from './TaskHistoryModal';
+import TaskHistoryModal from './task-components/TaskHistoryModal';
 
 import foxImage from '../assets/fox.png';
 import owlImage from '../assets/owl.png';

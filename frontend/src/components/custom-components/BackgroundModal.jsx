@@ -4,15 +4,15 @@ import React from 'react';
 import { X, Image } from 'lucide-react';
 
 // Import background images
-import cafeBackground from '../backgrounds/cafe.jpg';
-import fireplaceBackground from '../backgrounds/fireplace.jpg';
-import forestBackground from '../backgrounds/forest.jpg';
-import galaxyBackground from '../backgrounds/galaxy.jpg';
-import ghibliBackground from '../backgrounds/ghibli.jpg';
-import midnightBackground from '../backgrounds/midnight.jpg';
-import oceanBackground from '../backgrounds/ocean.jpg';
-import spiritedBackground from '../backgrounds/spirited.jpg';
-import sunsetBackground from '../backgrounds/sunset.jpg';
+import cafeBackground from '../../backgrounds/cafe.jpg';
+import fireplaceBackground from '../../backgrounds/fireplace.jpg';
+import forestBackground from '../../backgrounds/forest.jpg';
+import galaxyBackground from '../../backgrounds/galaxy.jpg';
+import ghibliBackground from '../../backgrounds/ghibli.jpg';
+import midnightBackground from '../../backgrounds/midnight.jpg';
+import oceanBackground from '../../backgrounds/ocean.jpg';
+import spiritedBackground from '../../backgrounds/spirited.jpg';
+import sunsetBackground from '../../backgrounds/sunset.jpg';
 
 const BackgroundModal = ({ isOpen, onClose, onSelect, currentBackground, isSmallScreen = false }) => {
   if (!isOpen) return null;

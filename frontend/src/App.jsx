@@ -1,9 +1,9 @@
 import Home from "./components/Home";
-import GoogleSignIn from "./components/GoogleSignIn";
+import GoogleSignIn from "./components/auth-components/GoogleSignIn";
 import Dashboard from "./components/Dashboard";
 import Profile from "./components/Profile";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { SessionProvider } from "./components/SessionContext";
+import ProtectedRoute from "./components/auth-components/ProtectedRoute";
+import { SessionProvider } from "./components/group-components/SessionContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 function App() {
