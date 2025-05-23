@@ -8,8 +8,19 @@ import owlImage from '../assets/owl.png';
 import pandaImage from '../assets/panda.png';
 import penguinImage from '../assets/penguin.png';
 import koalaImage from '../assets/koala.png';
+
+// Import all bird assets
 import sageGif from './pet-components/pet-assets/sage.gif';
 import sageIdlePng from './pet-components/pet-assets/sage-idle.png';
+import noviceGif from './pet-components/pet-assets/novice.gif';
+import noviceIdlePng from './pet-components/pet-assets/novice-idle.png';
+import apprenticeGif from './pet-components/pet-assets/apprentice.gif';
+import apprenticeIdlePng from './pet-components/pet-assets/apprentice-idle.png';
+import scholarGif from './pet-components/pet-assets/scholar.gif';
+import scholarIdlePng from './pet-components/pet-assets/scholar-idle.png';
+import masterGif from './pet-components/pet-assets/master.gif';
+import masterIdlePng from './pet-components/pet-assets/master-idle.png';
+
 import PetModal from './pet-components/PetModal';
 
 const animalAvatars = {
@@ -18,6 +29,35 @@ const animalAvatars = {
   panda: pandaImage,
   penguin: penguinImage,
   koala: koalaImage
+};
+
+// Bird assets mapping based on rank
+const birdAssets = {
+  novice: {
+    gif: noviceGif,
+    idle: noviceIdlePng,
+    name: 'Novice Bird'
+  },
+  apprentice: {
+    gif: apprenticeGif,
+    idle: apprenticeIdlePng,
+    name: 'Apprentice Bird'
+  },
+  scholar: {
+    gif: scholarGif,
+    idle: scholarIdlePng,
+    name: 'Scholar Bird'
+  },
+  sage: {
+    gif: sageGif,
+    idle: sageIdlePng,
+    name: 'Sage'
+  },
+  master: {
+    gif: masterGif,
+    idle: masterIdlePng,
+    name: 'Master Bird'
+  }
 };
 
 // Thought bubble messages for idle state
@@ -37,17 +77,18 @@ const thoughtBubbles = [
 function Header({ username, isTimerActive }) {
     const navigate = useNavigate();
     const [userAvatar, setUserAvatar] = useState('fox');
+    const [userRank, setUserRank] = useState('novice'); // Track user's rank
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [showPetModal, setShowPetModal] = useState(false);
     
-    const [sageVisible, setSageVisible] = useState(false);
-    const [sagePosition, setSagePosition] = useState({ x: 200, y: 200 });
-    const [sageSelected, setSageSelected] = useState(false);
-    const [sageTarget, setSageTarget] = useState(null);
+    const [birdVisible, setBirdVisible] = useState(false);
+    const [birdPosition, setBirdPosition] = useState({ x: 200, y: 200 });
+    const [birdSelected, setBirdSelected] = useState(false);
+    const [birdTarget, setBirdTarget] = useState(null);
     const [isMoving, setIsMoving] = useState(false);
-    const [sageRotation, setSageRotation] = useState(0);
+    const [birdRotation, setBirdRotation] = useState(0);
     const [showTrail, setShowTrail] = useState(false);
     const [trailPositions, setTrailPositions] = useState([]);
     
@@ -56,7 +97,7 @@ function Header({ username, isTimerActive }) {
     const [currentThought, setCurrentThought] = useState('');
     const [idleAnimation, setIdleAnimation] = useState('');
     
-    const sageRef = useRef(null);
+    const birdRef = useRef(null);
     const animationRef = useRef(null);
     const idleTimerRef = useRef(null);
     const thoughtTimerRef = useRef(null);
@@ -65,14 +106,36 @@ function Header({ username, isTimerActive }) {
 
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
-    // Determine which image to show based on state
-    const getSageImage = () => {
-        return (sageSelected || isMoving) ? sageGif : sageIdlePng;
+    // Get current bird assets based on rank
+    const getCurrentBirdAssets = () => {
+        return birdAssets[userRank] || birdAssets.novice;
     };
 
-    // Start idle animations when sage is visible and not moving/selected
+    // Determine which image to show based on state and rank
+    const getBirdImage = () => {
+        const assets = getCurrentBirdAssets();
+        
+        // For master rank, only show gif when selected, no movement
+        if (userRank === 'master') {
+            return birdSelected ? assets.gif : assets.idle;
+        }
+        
+        // For other ranks, show gif when selected or moving
+        return (birdSelected || isMoving) ? assets.gif : assets.idle;
+    };
+
+    // Get user rank based on total hours studied
+    const getUserRank = (totalHours) => {
+        if (totalHours >= 50) return 'master';
+        if (totalHours >= 20) return 'sage';
+        if (totalHours >= 10) return 'scholar';
+        if (totalHours >= 5) return 'apprentice';
+        return 'novice';
+    };
+
+    // Start idle animations when bird is visible and not moving/selected
     useEffect(() => {
-        if (sageVisible && !isMoving && !sageSelected) {
+        if (birdVisible && !isMoving && !birdSelected) {
             // Random subtle animations every 3-8 seconds
             const startIdleAnimations = () => {
                 const animations = ['bounce-subtle', 'sway', 'glow-pulse', 'bob'];
@@ -115,7 +178,7 @@ function Header({ username, isTimerActive }) {
             if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
             if (thoughtTimerRef.current) clearTimeout(thoughtTimerRef.current);
         };
-    }, [sageVisible, isMoving, sageSelected]);
+    }, [birdVisible, isMoving, birdSelected]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -129,10 +192,11 @@ function Header({ username, isTimerActive }) {
     }, []);
 
     useEffect(() => {
-        if (!sageTarget || !isMoving) return;
+        // Skip movement animation for master rank
+        if (userRank === 'master' || !birdTarget || !isMoving) return;
 
-        const startPosition = { ...sagePosition };
-        const targetPosition = { ...sageTarget };
+        const startPosition = { ...birdPosition };
+        const targetPosition = { ...birdTarget };
         
         const deltaX = targetPosition.x - startPosition.x;
         const deltaY = targetPosition.y - startPosition.y;
@@ -140,7 +204,7 @@ function Header({ username, isTimerActive }) {
         const duration = (distance / MOVEMENT_SPEED) * 1000;
         
         const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        setSageRotation(angle);
+        setBirdRotation(angle);
         setShowTrail(true);
         
         const startTime = Date.now();
@@ -154,7 +218,7 @@ function Header({ username, isTimerActive }) {
             const currentX = startPosition.x + (deltaX * progress);
             const currentY = startPosition.y + (deltaY * progress);
             
-            setSagePosition({ x: currentX, y: currentY });
+            setBirdPosition({ x: currentX, y: currentY });
             
             trailHistory.push({ x: currentX, y: currentY, time: Date.now() });
             const recentTrail = trailHistory.filter(pos => Date.now() - pos.time < 300);
@@ -164,9 +228,9 @@ function Header({ username, isTimerActive }) {
                 animationRef.current = requestAnimationFrame(animate);
             } else {
                 setIsMoving(false);
-                setSageTarget(null);
-                setSageSelected(false);
-                setSageRotation(0);
+                setBirdTarget(null);
+                setBirdSelected(false);
+                setBirdRotation(0);
                 setShowTrail(false);
                 setTrailPositions([]);
             }
@@ -181,45 +245,51 @@ function Header({ username, isTimerActive }) {
             setShowTrail(false);
             setTrailPositions([]);
         };
-    }, [sageTarget, isMoving, sagePosition, MOVEMENT_SPEED]);
+    }, [birdTarget, isMoving, birdPosition, MOVEMENT_SPEED, userRank]);
 
     useEffect(() => {
         const handlePageClick = (e) => {
-            if (sageSelected && sageRef.current && !sageRef.current.contains(e.target)) {
+            if (birdSelected && birdRef.current && !birdRef.current.contains(e.target)) {
+                // For master rank, don't allow movement - just deselect
+                if (userRank === 'master') {
+                    setBirdSelected(false);
+                    return;
+                }
+                
                 if (isMoving) return;
                 
                 const rect = document.body.getBoundingClientRect();
                 const x = e.clientX - rect.left - 80;
                 const y = e.clientY - rect.top - 80;
                 
-                setSageTarget({ x, y });
+                setBirdTarget({ x, y });
                 setIsMoving(true);
             }
-            else if (sageRef.current && !sageRef.current.contains(e.target)) {
-                setSageSelected(false);
+            else if (birdRef.current && !birdRef.current.contains(e.target)) {
+                setBirdSelected(false);
             }
         };
 
-        if (sageVisible) {
+        if (birdVisible) {
             document.addEventListener('click', handlePageClick);
         }
 
         return () => {
             document.removeEventListener('click', handlePageClick);
         };
-    }, [sageSelected, sageVisible, isMoving]);
+    }, [birdSelected, birdVisible, isMoving, userRank]);
 
     const handleEggClick = () => {
-        console.log('Egg clicked! Spawning sage...');
-        setSageVisible(true);
-        setSagePosition({ x: 200, y: 150 }); 
+        console.log('Egg clicked! Spawning bird...');
+        setBirdVisible(true);
+        setBirdPosition({ x: 200, y: 150 }); 
         setShowPetModal(false); 
     };
 
-    const handleSageClick = (e) => {
+    const handleBirdClick = (e) => {
         e.stopPropagation();
         if (!isMoving) {
-            setSageSelected(!sageSelected);
+            setBirdSelected(!birdSelected);
         }
     };
 
@@ -257,6 +327,11 @@ function Header({ username, isTimerActive }) {
                     if (data.avatar && animalAvatars[data.avatar]) {
                         setUserAvatar(data.avatar);
                     }
+                    
+                    // Calculate and set user rank based on total time studied
+                    const totalHours = data.totalTimeStudied / 60;
+                    const rank = getUserRank(totalHours);
+                    setUserRank(rank);
                 }
             } catch (error) {
                 console.error('Error fetching user avatar:', error);
@@ -439,9 +514,9 @@ function Header({ username, isTimerActive }) {
                 )}
             </nav>
 
-            {sageVisible && (
+            {birdVisible && (
                 <>
-                    {showTrail && trailPositions.map((pos, index) => (
+                    {showTrail && userRank !== 'master' && trailPositions.map((pos, index) => (
                         <div
                             key={index}
                             className="fixed z-30 pointer-events-none"
@@ -463,34 +538,34 @@ function Header({ username, isTimerActive }) {
                     ))}
                     
                     <div
-                        ref={sageRef}
-                        onClick={handleSageClick}
+                        ref={birdRef}
+                        onClick={handleBirdClick}
                         className={`fixed z-40 cursor-pointer transition-all duration-200 ${
-                            !isMoving ? 'hover:scale-105' : 'scale-110'
-                        } ${isMoving ? 'animate-bounce' : getIdleAnimationClass()}`}
+                            !isMoving ? 'hover:scale-120' : 'scale-120'
+                        } ${isMoving && userRank !== 'master' ? 'animate-bounce' : getIdleAnimationClass()}`}
                         style={{
-                            left: `${sagePosition.x}px`,
-                            top: `${sagePosition.y}px`,
-                            transform: `rotate(${sageRotation}deg)`,
+                            left: `${birdPosition.x}px`,
+                            top: `${birdPosition.y}px`,
+                            transform: userRank !== 'master' ? `rotate(${birdRotation}deg)` : 'rotate(0deg)',
                             transition: isMoving ? 'none' : 'transform 0.3s ease-out',
                         }}
                     >
                         <img
-                            src={getSageImage()}
-                            alt="Sage the chicken"
-                            className={`w-48 h-48 object-contain pointer-events-none ${
-                                isMoving ? 'animate-pulse' : ''
-                            }`}
-                            draggable={false}
-                            style={{
-                                imageRendering: 'crisp-edges',
-                                filter: idleAnimation === 'glow-pulse' ? undefined : 
-                                    'drop-shadow(0 0 15px rgba(251, 191, 36, 0.8)) drop-shadow(1px 1px 2px rgba(0,0,0,0.5))'
-                            }}
+                        src={getBirdImage()}
+                        alt={getCurrentBirdAssets().name}
+                        className={`${getBirdImage().includes('.gif') ? 'w-44 h-44' : 'w-36 h-36'} object-contain pointer-events-none ${
+                            isMoving && userRank !== 'master' ? 'animate-pulse' : ''
+                        }`}
+                        draggable={false}
+                        style={{
+                            imageRendering: 'crisp-edges',
+                            filter: idleAnimation === 'glow-pulse' ? undefined : 
+                                'drop-shadow(0 0 15px rgba(251, 191, 36, 0.8)) drop-shadow(1px 1px 2px rgba(0,0,0,0.5))'
+                        }}
                         />
                         
                         {/* Thought bubble */}
-                        {showThoughtBubble && !sageSelected && !isMoving && (
+                        {showThoughtBubble && !birdSelected && !isMoving && (
                             <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 thought-bubble-enter">
                                 <div className="relative bg-white rounded-full p-3 shadow-lg border-2 border-gray-200">
                                     <span className="text-2xl">{currentThought}</span>
@@ -503,13 +578,19 @@ function Header({ username, isTimerActive }) {
                             </div>
                         )}
                         
-                        {sageSelected && !isMoving && (
+                        {birdSelected && !isMoving && userRank !== 'master' && (
                             <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black text-xs px-2 py-1 rounded whitespace-nowrap">
                                 Time to fly!
                             </div>
                         )}
                         
-                        {isMoving && (
+                        {birdSelected && userRank === 'master' && (
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-rose-400 via-purple-400 to-blue-400 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                Majestic Master!
+                            </div>
+                        )}
+                        
+                        {isMoving && userRank !== 'master' && (
                             <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 flex items-center gap-1">
                                 <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs px-2 py-1 rounded-full animate-pulse">
                                     WOOOO!
