@@ -104,9 +104,16 @@ function Header({ username, isTimerActive }) {
         setMobileMenuOpen(!mobileMenuOpen);
     };
 
+    const handleSilverEgg = () => {
+        // Add your silver egg functionality here
+        console.log('Silver egg clicked!');
+        // Example: navigate to rewards or special feature
+        // navigate('/rewards');
+    };
+
     return (
         <>
-            <nav className="w-full h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm">
+            <nav className="w-full h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm relative">
                 <div className="flex items-center gap-4">
                     {isMobile && (
                         <button 
@@ -140,15 +147,27 @@ function Header({ username, isTimerActive }) {
                         </div>
                     )}
                 </div>
+                {isMobile && (
+                    <button
+                        onClick={handleSilverEgg}
+                        className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
+                    >
+                    </button>
+                )}
                 
                 {!isMobile && (
-                    <div className="flex flex-row gap-4">
+                    <div className="flex flex-row gap-4 items-center">
+                        <button
+                        onClick={handleSilverEgg}
+                        className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
+                        >
+                        </button>
                         <button
                             className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"
                             onClick={toggleLeaderboard}
                         >
                             <Trophy className="w-5 h-5 text-gray-300" />
-                            Leaderboard
+                            Rankings
                         </button>
                         <button
                             className="flex items-center gap-2 bg-black text-white py-2 px-4 rounded-xl font-semibold hover:bg-zinc-900/30 border border-zinc-800 transition duration-300 shadow-lg hover:shadow-zinc-900/25"

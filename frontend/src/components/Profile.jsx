@@ -173,7 +173,7 @@ const Profile = () => {
     const currentAvatar = animalAvatars.find(avatar => avatar.id === selectedAvatar) || animalAvatars[0];
 
     return (
-        <div className="min-h-screen bg-black font-sans">
+        <div className="min-h-screen bg-black font-inter">
             <Header 
                 username={profileData?.username}
                 isOwnProfile={profileData?.isOwnProfile}

@@ -2,7 +2,7 @@ import { Clock, BarChart3, Users } from 'lucide-react';
 
 function Home() {
   return (
-    <div className="min-w-screen min-h-screen bg-black font-sans overflow-hidden">
+    <div className="min-w-screen min-h-screen bg-black font-inter overflow-hidden">
       <nav className="w-full h-20 border-b border-zinc-800 flex items-center justify-between px-8">
         <a href="/">
           <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-5xl font-bold tracking-tight hover:scale-105 transition-transform">

@@ -676,7 +676,7 @@ useEffect(() => {
   const isExtraSmallScreen = windowWidth < 640;
 
   return (
-    <div className="min-h-screen font-sans transition-colors duration-500 select-none overflow-x-hidden">
+    <div className="min-h-screen font-inter transition-colors duration-500 select-none overflow-x-hidden">
       {renderBackground()}
 
       <div className="relative">
@@ -757,7 +757,7 @@ useEffect(() => {
             <div className="bg-zinc-950/30 backdrop-blur-sm p-4 sm:p-6 md:p-8 rounded-2xl border border-gray-800 shadow-xl">
               <div className="flex justify-center mb-6 md:mb-12">
                 <div
-                  className={`flex gap-2 sm:gap-4 bg-zinc-900/30 border border-gray-800 p-1 rounded-lg ${isExtraSmallScreen ? "text-xs" : "text-sm"}`}
+                  className={`mb-2 flex gap-2 sm:gap-4 bg-zinc-900/30 border border-gray-800 p-1 rounded-lg ${isExtraSmallScreen ? "text-xs" : "text-sm"}`}
                 >
                   <button
                     onClick={() => handleTimerTypeChange("pomodoro")}
@@ -795,15 +795,17 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div className="text-center mb-4 md:mb-6">
+              <div className="text-center mb-8 md:mb-6">
                 <h2
-                  className={`font-mono tracking-widest text-white ${
-                    isExtraSmallScreen
-                      ? "text-5xl"
-                      : windowWidth < 1080
-                        ? "text-6xl"
-                        : "text-8xl"
-                  } font-bold`}
+                className={`font-inter tracking-widest text-white ${
+                  isExtraSmallScreen
+                    ? "text-5xl"
+                    : windowWidth < 1080
+                      ? "text-6xl"
+                      : windowWidth > 1350
+                        ? "text-8xl"
+                        : "text-7xl"
+                } font-bold`}
                 >
                   {formatTime(time)}
                 </h2>
