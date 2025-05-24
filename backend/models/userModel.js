@@ -51,7 +51,21 @@ const userSchema = new mongoose.Schema({
     },
     lastCompletedSession: {
         sessionId: String,
-        completedAt: { type: Date, default: Date.now }
+        completedAt: Date
+    },
+    petData: {
+        hasHatched: {
+            type: Boolean,
+            default: false
+        },
+        unlockedPets: {
+            type: [String],
+            default: ['novice']
+        },
+        activePet: {
+            type: String,
+            default: null
+        }
     }
 }, {
     timestamps: true

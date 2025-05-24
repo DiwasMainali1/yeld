@@ -15,8 +15,12 @@ import {
     getProfile, 
     updateSessionStats, 
     updateProfile,
-    getLeaderboard
+    getLeaderboard,
+    updatePetData
 } from './controllers/userController.js';
+// Add these imports for the cleanup job
+import Session from './models/sessionModel.js';
+import User from './models/userModel.js';
 
 dotenv.config();
 
@@ -27,7 +31,7 @@ const app = express();
 
 // Enhanced CORS configuration to handle preflight requests properly
 app.use(cors({
-    origin: ['http://localhost:5173'], // Explicitly specify allowed origins
+    origin: ['http://localhost:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -55,7 +59,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use('/auth', userRoutes);
 app.use('/tasks', taskRoutes);
-app.use('/sessions', sessionRoutes); // Add session routes
+app.use('/sessions', sessionRoutes);
 
 //Update profile photo
 app.put('/profile/update', protect, updateProfile);
@@ -65,13 +69,12 @@ app.get('/dashboard', protect, getDashboard);
 app.get('/profile/:username', protect, getProfile);
 app.post('/session/complete', protect, updateSessionStats);
 app.get('/leaderboard', protect, getLeaderboard);
-
+app.put('/profile/update-pet-data', protect, updatePetData);
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     
-    // Handle Multer errors
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ 
@@ -83,14 +86,12 @@ app.use((err, req, res, next) => {
         });
     }
 
-    // Handle validation errors
     if (err.name === 'ValidationError') {
         return res.status(400).json({ 
             message: err.message 
         });
     }
 
-    // Handle other errors
     res.status(500).json({ 
         message: 'Server error occurred',
         error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -106,8 +107,73 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Session cleanup helper function - RENAMED to avoid conflict
+const updateUserSessionStats = async (userId, session, sessionCompleted = false) => {
+    try {
+        if (!session.isActive || !session.startTime) {
+            return;
+        }
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return;
+        }
+        
+        const sessionId = session._id.toString();
+        
+        if (user.lastCompletedSession && 
+            user.lastCompletedSession.sessionId === sessionId &&
+            (Date.now() - user.lastCompletedSession.completedAt) < 5 * 60 * 1000) {
+            return;
+        }
+        
+        if (sessionCompleted) {
+            const minutesStudied = Math.floor(session.duration / 60);
+            user.sessionsCompleted += 1;
+            user.totalTimeStudied += minutesStudied;
+            
+            user.lastCompletedSession = {
+                sessionId: sessionId,
+                completedAt: new Date()
+            };
+            
+            await user.save();
+            console.log(`Added ${minutesStudied} minutes for user ${userId}`);
+        }
+    } catch (error) {
+        console.error('Error updating session stats:', error);
+    }
+};
+
+// Session cleanup job
+const cleanupExpiredSessions = async () => {
+    try {
+        const expiredSessions = await Session.find({
+            isActive: true,
+            expiresAt: { $lte: new Date() }
+        });
+
+        for (const session of expiredSessions) {
+            const allParticipants = [session.creator, ...session.participants];
+            
+            for (const participantId of allParticipants) {
+                await updateUserSessionStats(participantId, session, true);
+            }
+            
+            await Session.deleteOne({ _id: session._id });
+            console.log(`Cleaned up expired session ${session._id}`);
+        }
+    } catch (error) {
+        console.error('Error in cleanup job:', error);
+    }
+};
+
 // Connect to database and start server
 app.listen(PORT, () => {
     connectDB();
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // Start the session cleanup job after server starts
+    setInterval(cleanupExpiredSessions, 60000); // Run every 60 seconds
+    console.log('Session cleanup job started');
 });

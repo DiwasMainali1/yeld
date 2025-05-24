@@ -12,7 +12,6 @@ export const createSession = async (req, res) => {
       return res.status(400).json({ message: 'Invalid duration. Must be between 1 and 120 minutes' });
     }
     
-    // Check if user already has an active session
     const existingSession = await Session.findOne({
       $or: [
         { creator: req.user._id },
@@ -25,7 +24,6 @@ export const createSession = async (req, res) => {
       return res.status(400).json({ message: 'You already have an active session' });
     }
     
-    // Create new session
     const session = await Session.create({
       creator: req.user._id,
       participants: [],
@@ -48,7 +46,6 @@ export const createSession = async (req, res) => {
 // @access  Private
 export const checkSession = async (req, res) => {
   try {
-    // Check if user is in a session
     const session = await Session.findOne({
       $or: [
         { creator: req.user._id },
@@ -60,16 +57,11 @@ export const checkSession = async (req, res) => {
       return res.json({ session: null });
     }
     
-    // Check if session is expired or completed
     if (session.isExpired) {
-      console.log('Session expired, cleaning up:', session._id);
-      
-      // If the session was active and has finished naturally, update user stats
       if (session.isActive && session.startTime) {
         const startTime = new Date(session.startTime);
         const endTime = new Date(startTime.getTime() + session.duration * 1000);
         
-        // Only update stats if the session has reached its natural end time
         if (new Date() >= endTime) {
           await updateSessionStats(req.user._id, session, true);
         }
@@ -79,12 +71,10 @@ export const checkSession = async (req, res) => {
       return res.json({ session: null });
     }
     
-    // Get creator information with avatar
     const creator = await User.findById(session.creator).select('username avatar');
     const creatorUsername = creator ? creator.username : 'Unknown User';
     const creatorAvatar = creator ? (creator.avatar || 'fox') : 'fox';
     
-    // Get participant information with avatars
     let participantUsernames = {};
     let participantAvatars = {};
     
@@ -131,13 +121,11 @@ export const joinSession = async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
     
-    // Check if session is expired
     if (session.isExpired) {
       await Session.deleteOne({ _id: session._id });
       return res.status(400).json({ message: 'Session has expired' });
     }
     
-    // Check if user is already in another session
     const userInOtherSession = await Session.findOne({
       _id: { $ne: session._id },
       $or: [
@@ -150,12 +138,10 @@ export const joinSession = async (req, res) => {
       return res.status(400).json({ message: 'You are already in another session' });
     }
     
-    // Get creator information with avatar
     const creator = await User.findById(session.creator).select('username avatar');
     const creatorUsername = creator ? creator.username : 'Unknown User';
     const creatorAvatar = creator ? (creator.avatar || 'fox') : 'fox';
     
-    // Get participant information with avatars
     let participantUsernames = {};
     let participantAvatars = {};
     
@@ -170,7 +156,6 @@ export const joinSession = async (req, res) => {
       });
     }
     
-    // If user is the creator, just return the session with avatar data
     if (session.creator.equals(req.user._id)) {
       return res.json({
         _id: session._id,
@@ -189,17 +174,14 @@ export const joinSession = async (req, res) => {
       });
     }
     
-    // Add user to participants if not already included
     if (!session.participants.includes(req.user._id)) {
       session.participants.push(req.user._id);
       await session.save();
       
-      // Add the new participant to the usernames and avatars objects
       participantUsernames[req.user._id.toString()] = req.user.username;
       participantAvatars[req.user._id.toString()] = req.user.avatar || 'fox';
     }
     
-    // Calculate expiresAt if session is active but missing this field
     let expiresAt = session.expiresAt;
     if (session.isActive && session.startTime && !expiresAt) {
       const startTime = new Date(session.startTime);
@@ -222,7 +204,6 @@ export const joinSession = async (req, res) => {
       userId: req.user._id.toString()
     });
   } catch (error) {
-    console.error('Error in joinSession:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -238,38 +219,27 @@ export const startSession = async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
     
-    // Only creator can start session
     if (!session.creator.equals(req.user._id)) {
       return res.status(403).json({ message: 'Only the creator can start the session' });
     }
     
-    // Check if session is already active
     if (session.isActive) {
       return res.status(400).json({ message: 'Session is already active' });
     }
     
-    // Check if session is expired
     if (session.isExpired) {
       await Session.deleteOne({ _id: session._id });
       return res.status(400).json({ message: 'Session has expired' });
     }
     
-    // Use exact server time
     const serverTime = new Date();
     session.isActive = true;
     session.startTime = serverTime;
     
-    // Set precise end time based on server time
     const serverEndTime = new Date(serverTime.getTime() + session.duration * 1000);
     session.expiresAt = serverEndTime;
     
     await session.save();
-    
-    console.log(`Session ${session._id} started:`, {
-      startTime: serverTime.toISOString(),
-      expiresAt: serverEndTime.toISOString(),
-      duration: session.duration
-    });
     
     res.json({
       _id: session._id,
@@ -294,7 +264,6 @@ export const leaveSession = async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
     
-    // Check if user is part of the session
     const isUserInSession = session.creator.equals(req.user._id) || 
                           session.participants.some(id => id.equals(req.user._id));
     
@@ -302,66 +271,45 @@ export const leaveSession = async (req, res) => {
       return res.status(403).json({ message: 'You are not part of this session' });
     }
     
-    // Handle session completion stats
     if (session.isActive && session.startTime) {
-      const startTime = new Date(session.startTime);
-      const sessionEndTime = new Date(startTime.getTime() + session.duration * 1000);
       const now = new Date();
+      const sessionEndTime = new Date(session.expiresAt);
       
-      // Check if session completed naturally (reached end time)
-      const sessionCompletedNaturally = now >= sessionEndTime;
-      
-      if (sessionCompletedNaturally) {
-        console.log(`User ${req.user._id} completed session ${session._id} naturally`);
-        await updateSessionStats(req.user._id, session, true);
-      } else {
-        console.log(`User ${req.user._id} left session ${session._id} early`);
-        // Update stats with partial time only if significant time was spent
-        const timeSpent = Math.floor((now - startTime) / 1000);
-        if (timeSpent >= 60) { // At least 1 minute
-          await updateSessionStats(req.user._id, session, false, timeSpent);
+      if (now < sessionEndTime) {
+        const timeSpent = Math.floor((now - new Date(session.startTime)) / 1000);
+        const minimumTime = 5 * 60;
+        
+        if (timeSpent >= minimumTime) {
+          const minutesStudied = Math.floor(timeSpent / 60);
+          const user = await User.findById(req.user._id);
+          
+          const sessionId = session._id.toString();
+          if (!user.lastCompletedSession || 
+              user.lastCompletedSession.sessionId !== sessionId) {
+            
+            user.sessionsCompleted += 1;
+            user.totalTimeStudied += minutesStudied;
+            user.lastCompletedSession = {
+              sessionId: sessionId,
+              completedAt: new Date()
+            };
+            
+            await user.save();
+          }
         }
       }
     }
     
-    // Check if the leaving user is the creator
-    const isCreatorLeaving = session.creator.equals(req.user._id);
-    
-    if (isCreatorLeaving) {
-      console.log(`Creator leaving session ${session._id}, deleting session`);
-      // Update stats for all participants before deleting
-      if (session.isActive && session.startTime) {
-        const allParticipants = [session.creator, ...session.participants];
-        for (const participantId of allParticipants) {
-          if (!participantId.equals(req.user._id)) { // Skip the leaving creator (already handled above)
-            const startTime = new Date(session.startTime);
-            const sessionEndTime = new Date(startTime.getTime() + session.duration * 1000);
-            const now = new Date();
-            const sessionCompletedNaturally = now >= sessionEndTime;
-            
-            if (sessionCompletedNaturally) {
-              await updateSessionStats(participantId, session, true);
-            } else {
-              const timeSpent = Math.floor((now - startTime) / 1000);
-              if (timeSpent >= 60) {
-                await updateSessionStats(participantId, session, false, timeSpent);
-              }
-            }
-          }
-        }
-      }
-      
+    if (session.creator.equals(req.user._id)) {
       await Session.deleteOne({ _id: session._id });
       return res.json({ message: 'Session deleted successfully' });
     } else {
-      // If participant is leaving, just remove them from participants array
       session.participants = session.participants.filter(id => !id.equals(req.user._id));
       await session.save();
       return res.json({ message: 'Left session successfully' });
     }
     
   } catch (error) {
-    console.error('Error in leaveSession:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -377,7 +325,10 @@ export const completeSession = async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
     
-    // Check if user is part of the session
+    if (!session.isActive || !session.startTime) {
+      return res.status(400).json({ message: 'Invalid session state' });
+    }
+    
     const isUserInSession = session.creator.equals(req.user._id) || 
                           session.participants.some(id => id.equals(req.user._id));
     
@@ -385,13 +336,33 @@ export const completeSession = async (req, res) => {
       return res.status(403).json({ message: 'You are not part of this session' });
     }
     
-    // Only update stats if session was active and has a startTime
-    if (session.isActive && session.startTime) {
-      console.log(`Session ${session._id} completed by user ${req.user._id}`);
+    const now = new Date();
+    const sessionEndTime = new Date(session.expiresAt);
+    
+    const timeDifference = now.getTime() - sessionEndTime.getTime();
+    const allowedVariance = 60 * 1000;
+    
+    if (Math.abs(timeDifference) <= allowedVariance) {
       await updateSessionStats(req.user._id, session, true);
       
-      // Get updated user stats
       const user = await User.findById(req.user._id);
+      
+      const allParticipants = [session.creator, ...session.participants];
+      let allCompleted = true;
+      
+      for (const participantId of allParticipants) {
+        const participant = await User.findById(participantId);
+        if (participant && 
+            (!participant.lastCompletedSession || 
+             participant.lastCompletedSession.sessionId !== session._id.toString())) {
+          allCompleted = false;
+          break;
+        }
+      }
+      
+      if (allCompleted) {
+        await Session.deleteOne({ _id: session._id });
+      }
       
       res.json({
         message: 'Session completed successfully',
@@ -401,10 +372,18 @@ export const completeSession = async (req, res) => {
         }
       });
     } else {
-      res.status(400).json({ message: 'Session was not active' });
+      const remainingSeconds = Math.ceil((sessionEndTime.getTime() - now.getTime()) / 1000);
+      if (remainingSeconds > 0) {
+        res.status(400).json({ 
+          message: `Session has ${remainingSeconds} seconds remaining` 
+        });
+      } else {
+        res.status(400).json({ 
+          message: `Session ended ${Math.abs(remainingSeconds)} seconds ago` 
+        });
+      }
     }
   } catch (error) {
-    console.error('Error in completeSession:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -420,18 +399,12 @@ export const getSessionStatus = async (req, res) => {
       return res.status(404).json({ message: 'Session not found', deleted: true });
     }
     
-    // Check if session is expired
     if (session.isExpired) {
-      console.log(`Session ${session._id} has expired, cleaning up`);
-      
-      // If the session was active and completed naturally, update stats for all participants
       if (session.isActive && session.startTime) {
         const startTime = new Date(session.startTime);
         const endTime = new Date(startTime.getTime() + session.duration * 1000);
         
-        // Only update stats if the session has reached its natural end time
         if (new Date() >= endTime) {
-          console.log(`Updating stats for all participants in expired session ${session._id}`);
           const allParticipants = [session.creator, ...session.participants];
           
           for (const participantId of allParticipants) {
@@ -440,7 +413,6 @@ export const getSessionStatus = async (req, res) => {
         }
       }
       
-      // Delete the expired session
       await Session.deleteOne({ _id: session._id });
       
       return res.json({ 
@@ -449,37 +421,33 @@ export const getSessionStatus = async (req, res) => {
       });
     }
 
-    // Check if session should be expired based on time (additional safety check)
     if (session.isActive && session.startTime) {
       const startTime = new Date(session.startTime);
       const endTime = new Date(startTime.getTime() + session.duration * 1000);
       const now = new Date();
       
       if (now >= endTime) {
-        console.log(`Session ${session._id} should be expired based on time calculation`);
-        
-        // Update stats for all participants
-        const allParticipants = [session.creator, ...session.participants];
-        for (const participantId of allParticipants) {
-          await updateSessionStats(participantId, session, true);
-        }
-        
-        // Mark as expired and delete
-        await Session.deleteOne({ _id: session._id });
-        
         return res.json({ 
-          expired: true,
-          message: 'Session completed and cleaned up'
+          participants: session.participants,
+          participantUsernames: {},
+          participantAvatars: {},
+          creatorUsername: '',
+          creatorAvatar: 'fox',
+          creator: session.creator,
+          isActive: session.isActive,
+          startTime: session.startTime,
+          expiresAt: session.expiresAt,
+          serverTime: new Date(),
+          expired: false,
+          naturallyCompleted: true
         });
       }
     }
 
-    // Get creator information with avatar
     const creator = await User.findById(session.creator).select('username avatar');
     const creatorUsername = creator ? creator.username : 'Unknown User';
     const creatorAvatar = creator ? (creator.avatar || 'fox') : 'fox';
     
-    // Get participant usernames and avatars
     let participantUsernames = {};
     let participantAvatars = {};
     
@@ -500,7 +468,6 @@ export const getSessionStatus = async (req, res) => {
       expiresAt = new Date(startTime.getTime() + session.duration * 1000);
     }
     
-    // Include the current server time for client synchronization
     const serverTime = new Date();
     
     res.json({
@@ -517,107 +484,34 @@ export const getSessionStatus = async (req, res) => {
       expired: false
     });
   } catch (error) {
-    console.error('Error in getSessionStatus:', error);
     res.status(400).json({ message: error.message });
   }
 };
 
-// Helper function to update user stats when session completes
-const updateSessionStats = async (userId, session, sessionCompleted = false, customDuration = null) => {
+const updateSessionStats = async (userId, session, sessionCompleted = false) => {
   try {
-    // Only update if the session was active
     if (!session.isActive || !session.startTime) {
       return;
     }
     
     const user = await User.findById(userId);
     if (!user) {
-      console.error(`User ${userId} not found for stats update`);
       return;
     }
     
     const sessionId = session._id.toString();
     
-    // Check if this session was already completed (within last 5 minutes to be safe)
     if (user.lastCompletedSession && 
         user.lastCompletedSession.sessionId === sessionId &&
         (Date.now() - user.lastCompletedSession.completedAt) < 5 * 60 * 1000) {
-      console.log(`Stats already updated for user ${userId} and session ${sessionId}`);
       return;
     }
-    
-    console.log(`Updating stats for user ${userId}:`, {
-      sessionCompleted,
-      customDuration,
-      sessionDuration: session.duration,
-      sessionActive: session.isActive
-    });
     
     if (sessionCompleted) {
       const minutesStudied = Math.floor(session.duration / 60);
       user.sessionsCompleted += 1;
       user.totalTimeStudied += minutesStudied;
       
-      // Update the last completed session to prevent duplicates
-      user.lastCompletedSession = {
-        sessionId: sessionId,
-        completedAt: new Date()
-      };
-      
-      console.log(`Added ${minutesStudied} minutes for completed session (using full duration)`);
-      await user.save();
-      return;
-    }
-    
-    // Handle custom duration (when user exits early with specific time)
-    if (customDuration && customDuration > 0) {
-      const minutesStudied = Math.floor(customDuration / 60);
-      if (minutesStudied > 0) {
-        user.sessionsCompleted += 1;
-        user.totalTimeStudied += minutesStudied;
-        
-        // Update the last completed session to prevent duplicates
-        user.lastCompletedSession = {
-          sessionId: sessionId,
-          completedAt: new Date()
-        };
-        
-        console.log(`Added ${minutesStudied} minutes for partial session`);
-        await user.save();
-      }
-      return;
-    }
-    
-    // Handle early exit scenarios - calculate actual time spent
-    if (session.isActive && session.startTime) {
-      const startTime = new Date(session.startTime);
-      const now = new Date();
-      const sessionEndTime = new Date(startTime.getTime() + session.duration * 1000);
-      
-      // Check if session completed naturally vs early exit
-      const sessionCompletedNaturally = now >= sessionEndTime;
-      
-      if (sessionCompletedNaturally) {
-        // If session completed naturally, use full duration regardless of timing differences
-        const minutesStudied = Math.floor(session.duration / 60);
-        user.sessionsCompleted += 1;
-        user.totalTimeStudied += minutesStudied;
-        
-        console.log(`Added ${minutesStudied} minutes for naturally completed session`);
-      } else {
-        // Only for early exits, calculate actual time spent
-        const actualEndTime = now > sessionEndTime ? sessionEndTime : now;
-        const timeSpentSeconds = Math.floor((actualEndTime - startTime) / 1000);
-        const minutesStudied = Math.floor(timeSpentSeconds / 60);
-        
-        if (minutesStudied > 0) {
-          user.sessionsCompleted += 1;
-          user.totalTimeStudied += minutesStudied;
-          console.log(`Added ${minutesStudied} minutes for early exit`);
-        }
-      }
-      
-      // Update the last completed session to prevent duplicates
       user.lastCompletedSession = {
         sessionId: sessionId,
         completedAt: new Date()
@@ -629,3 +523,26 @@ const updateSessionStats = async (userId, session, sessionCompleted = false, cus
     console.error('Error updating session stats:', error);
   }
 };
+
+const cleanupExpiredSessions = async () => {
+  try {
+    const expiredSessions = await Session.find({
+      isActive: true,
+      expiresAt: { $lte: new Date() }
+    });
+
+    for (const session of expiredSessions) {
+      const allParticipants = [session.creator, ...session.participants];
+      
+      for (const participantId of allParticipants) {
+        await updateSessionStats(participantId, session, true);
+      }
+      
+      await Session.deleteOne({ _id: session._id });
+    }
+  } catch (error) {
+    console.error('Error in cleanup job:', error);
+  }
+};
+
+setInterval(cleanupExpiredSessions, 30000);

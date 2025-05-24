@@ -53,6 +53,7 @@ function Dashboard() {
     sessionDuration,
     participants,
     participantNames,
+    resetSessionState
   } = useSession();
 
   const [pomodoroDuration, setPomodoroDuration] = useState(50 * 60);
@@ -66,6 +67,8 @@ function Dashboard() {
   const [currentCycleCount, setCurrentCycleCount] = useState(0);
   const sessionTimerRef = useRef(null);
   const [sessionEndTime, setSessionEndTime] = useState(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionStats, setCompletionStats] = useState(null);
 
   const [username, setUsername] = useState('');
   const [totalTimeStudied, setTotalTimeStudied] = useState(0);
@@ -81,7 +84,9 @@ function Dashboard() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+  // REMOVED localStorage usage for background - now purely from database
   const [background, setBackground] = useState('default');
+  const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
 
   const [tempPomodoro, setTempPomodoro] = useState(pomodoroDuration / 60);
   const [tempShortBreak, setTempShortBreak] = useState(shortBreakDuration / 60);
@@ -147,25 +152,94 @@ const completeGroupSession = async () => {
     }
   } catch (error) {
     console.error('Error completing session:', error);
-    // Fallback to regular stats update
-    updateUserStats(sessionDuration);
   } finally {
-    // Always leave the session and reset timer after completion
-    await handleSessionCompletionCleanup();
+    handleSessionCompletionCleanup();
   }
 };
+
+
+useEffect(() => {
+  if (sessionTimerRef.current) {
+    clearInterval(sessionTimerRef.current);
+    sessionTimerRef.current = null;
+  }
+
+  if (isInSession && sessionStarted && isActive && session && !sessionCompletedRef.current) {
+    let endTime;
+    
+    if (session.expiresAt) {
+      endTime = new Date(session.expiresAt).getTime();
+    } else if (session.startTime) {
+      const startTime = new Date(session.startTime).getTime();
+      endTime = startTime + (sessionDuration * 1000);
+    } else {
+      setTime(sessionDuration);
+      return;
+    }
+    
+    setSessionEndTime(endTime);
+
+    sessionTimerRef.current = setInterval(() => {
+      const currentTime = Date.now() + serverTimeOffset;
+      const remainingTime = Math.max(0, Math.floor((endTime - currentTime) / 1000));
+
+      if (remainingTime <= 0) {
+        clearInterval(sessionTimerRef.current);
+        sessionTimerRef.current = null;
+        
+        if (!sessionCompletedRef.current) {
+          sessionCompletedRef.current = true;
+          audio.play().catch((error) => console.error("Error playing alarm:", error));
+          
+          completeGroupSession();
+          
+          setTime(0);
+          setIsActive(false);
+        }
+      } else {
+        setTime(remainingTime);
+      }
+    }, 1000);
+  }
+  else if (!isInSession && isActive) {
+    sessionTimerRef.current = setInterval(() => {
+      setTime((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(sessionTimerRef.current);
+          sessionTimerRef.current = null;
+          audio.play().catch((error) => console.error("Error playing alarm:", error));
+          
+          if (timerType === 'pomodoro') {
+            updateUserStats(pomodoroDuration);
+          }
+          
+          handleTimerCompletion();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  }
+
+  return () => {
+    if (sessionTimerRef.current) {
+      clearInterval(sessionTimerRef.current);
+      sessionTimerRef.current = null;
+    }
+  };
+}, [isActive, isInSession, sessionStarted, session, serverTimeOffset, sessionDuration, pomodoroDuration]);
+
+
 
 // Add this new function to handle the cleanup after session completion:
 const handleSessionCompletionCleanup = async () => {
   try {
-    // Leave the session using the existing context function
-    await leaveSession();
+    resetSessionState(); 
     
-    console.log('Session completed and left successfully');
+    console.log('Session completed and cleaned up successfully');
   } catch (error) {
-    console.error('Error leaving session after completion:', error);
+    console.error('Error during session cleanup:', error);
   } finally {
-    // Always reset the timer state regardless of whether leaving succeeded
     resetToUserTimer();
   }
 };
@@ -315,21 +389,13 @@ useEffect(() => {
     );
   };
 
-  useEffect(() => {
-    const savedBackground = localStorage.getItem('background');
-    if (savedBackground) {
-      setBackground(savedBackground);
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('background', background);
-  }, [background]);
+  // REMOVED localStorage effects for background - now purely database driven
 
   useEffect(() => {
     setParticipantsList(participantNames || []);
   }, [participantNames]);
 
+  // UPDATED: Fetch user data and set all settings from database
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -344,7 +410,7 @@ useEffect(() => {
         }
         const data = await response.json();
         setUsername(data.username);
-        localStorage.setItem("username", data.username);
+        // REMOVED: localStorage.setItem("username", data.username);
         await fetchUserStats(data.username);
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -372,6 +438,7 @@ useEffect(() => {
       setTotalTimeStudied(data.totalTimeStudied);
       setCompletedSessions(data.sessionsCompleted || 0);
 
+      // Set background from database (not localStorage)
       if (data.background) {
         setBackground(data.background);
       }
@@ -385,6 +452,8 @@ useEffect(() => {
           setTime(data.timerSettings.pomodoro);
         }
       }
+
+      setIsUserDataLoaded(true);
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
@@ -587,6 +656,7 @@ useEffect(() => {
     setShowBackgroundModal(false);
   };
 
+  // UPDATED: Background selection now purely database-driven
   const handleSelectBackground = async (backgroundId) => {
     setBackground(backgroundId);
     setShowBackgroundModal(false);
@@ -608,6 +678,15 @@ useEffect(() => {
       }
     } catch (error) {
       console.error('Error saving background preference:', error);
+      // Revert background if save failed
+      const token = localStorage.getItem('userToken');
+      const revertResponse = await fetch(`http://localhost:5000/profile/${username}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (revertResponse.ok) {
+        const data = await revertResponse.json();
+        setBackground(data.background || 'default');
+      }
     }
   };
 
@@ -674,6 +753,15 @@ useEffect(() => {
   const isMobile = windowWidth < 768;
   const isSmallScreen = windowWidth < 1024;
   const isExtraSmallScreen = windowWidth < 640;
+
+  // Don't render until user data is loaded to prevent flash
+  if (!isUserDataLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin h-12 w-12 border-2 border-white rounded-full border-t-transparent"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen font-inter transition-colors duration-500 select-none overflow-x-hidden">
@@ -811,7 +899,7 @@ useEffect(() => {
                 </h2>
               </div>
 
-              <div className="flex justify-center gap-4 md:gap-6 mb-4 md:mb-6">
+              <div className="flex justify-center  gap-4 md:gap-6 mb-8 md:mb-6">
                 {(!isInSession ||
                   (isInSession && isCreator && !sessionStarted)) && (
                   <button

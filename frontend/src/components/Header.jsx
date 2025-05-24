@@ -87,8 +87,9 @@ function Header({ username, isTimerActive }) {
     
     // Pet state management
     const [hasHatchedPet, setHasHatchedPet] = useState(false);
-    const [unlockedPets, setUnlockedPets] = useState([]);
+    const [unlockedPets, setUnlockedPets] = useState(['novice']);
     const [activePet, setActivePet] = useState(null);
+    const [isLoadingUserData, setIsLoadingUserData] = useState(true);
     
     const [birdVisible, setBirdVisible] = useState(false);
     const [birdPosition, setBirdPosition] = useState({ x: 200, y: 200 });
@@ -113,33 +114,124 @@ function Header({ username, isTimerActive }) {
 
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
-    // Load pet data from localStorage on mount
-    useEffect(() => {
-        const savedPetData = localStorage.getItem(`petData_${username}`);
-        if (savedPetData) {
-            const petData = JSON.parse(savedPetData);
-            setHasHatchedPet(petData.hasHatched || false);
-            setUnlockedPets(petData.unlockedPets || []);
-            setActivePet(petData.activePet || null);
-            
-            // If there's an active pet, show it
-            if (petData.activePet && petData.hasHatched) {
-                setBirdVisible(true);
+    // Get user rank based on total hours studied
+    const getUserRank = (totalHours) => {
+        if (totalHours >= 50) return 'master';
+        if (totalHours >= 20) return 'sage';
+        if (totalHours >= 10) return 'scholar';
+        if (totalHours >= 5) return 'apprentice';
+        return 'novice';
+    };
+
+    const updatePetDataInDB = async (petData) => {
+        try {
+            const token = localStorage.getItem('userToken');
+            if (!token) {
+                console.error('No token found');
+                return;
             }
+
+            const response = await fetch('http://localhost:5000/profile/update-pet-data', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ petData })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Failed to update pet data:', response.status, errorText);
+                throw new Error(`Failed to update pet data: ${response.status}`);
+            }
+
+            const result = await response.json();
+        } catch (error) {
+            console.error('Error updating pet data:', error);
         }
+    };
+
+    // Load user data from database on mount
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (!username) {
+                setIsLoadingUserData(false);
+                return;
+            }
+
+            try {
+                setIsLoadingUserData(true);
+                const token = localStorage.getItem('userToken');
+                if (!token) {
+                    console.error('No token found');
+                    setIsLoadingUserData(false);
+                    return;
+                }
+                const response = await fetch(`http://localhost:5000/profile/${username}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Set avatar
+                    if (data.avatar && animalAvatars[data.avatar]) {
+                        setUserAvatar(data.avatar);
+                    }
+                    
+                    // Calculate and set user rank based on total time studied
+                    const totalHours = data.totalTimeStudied / 60;
+                    const rank = getUserRank(totalHours);
+                    setUserRank(rank);
+                    
+                    // Set pet data from database with proper fallbacks
+                    const petData = data.petData || {};
+                    
+                    const hasHatched = petData.hasHatched || false;
+                    const unlocked = petData.unlockedPets || ['novice'];
+                    const active = petData.activePet || null;
+                    
+                    setHasHatchedPet(hasHatched);
+                    setUnlockedPets(unlocked);
+                    setActivePet(active);
+                    
+                    
+                    // Show bird if hatched and has active pet
+                    if (hasHatched && active) {
+                        setBirdVisible(true);
+                    }
+                } else {
+                    console.error('Failed to fetch user data:', response.status, await response.text());
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            } finally {
+                setIsLoadingUserData(false);
+            }
+        };
+
+        fetchUserData();
     }, [username]);
 
-    // Save pet data whenever it changes
+    // Save pet data to database whenever it changes (but not on initial load)
     useEffect(() => {
-        if (username) {
+        // Skip saving during initial load
+        if (isLoadingUserData || !username) return;
+        
+        // Only save if we have meaningful pet data changes
+        if (hasHatchedPet || unlockedPets.length > 1 || activePet) {
             const petData = {
                 hasHatched: hasHatchedPet,
                 unlockedPets: unlockedPets,
                 activePet: activePet
             };
-            localStorage.setItem(`petData_${username}`, JSON.stringify(petData));
+            updatePetDataInDB(petData);
         }
-    }, [hasHatchedPet, unlockedPets, activePet, username]);
+    }, [hasHatchedPet, unlockedPets, activePet, username, isLoadingUserData]);
 
     // Get current bird assets based on rank or active pet
     const getCurrentBirdAssets = () => {
@@ -164,17 +256,11 @@ function Header({ username, isTimerActive }) {
         return (birdSelected || isMoving) ? assets.gif : assets.idle;
     };
 
-    // Get user rank based on total hours studied
-    const getUserRank = (totalHours) => {
-        if (totalHours >= 50) return 'master';
-        if (totalHours >= 20) return 'sage';
-        if (totalHours >= 10) return 'scholar';
-        if (totalHours >= 5) return 'apprentice';
-        return 'novice';
-    };
-
     // Update unlocked pets based on rank
     useEffect(() => {
+        // Skip during initial load
+        if (isLoadingUserData) return;
+
         const newUnlockedPets = ['novice']; // Always have novice unlocked
         
         if (userRank === 'apprentice' || userRank === 'scholar' || userRank === 'sage' || userRank === 'master') {
@@ -192,11 +278,11 @@ function Header({ username, isTimerActive }) {
         
         setUnlockedPets(newUnlockedPets);
         
-        // If no active pet is set, set it to the current rank
+        // If no active pet is set and the pet has hatched, set it to the current rank
         if (!activePet && hasHatchedPet) {
             setActivePet(userRank);
         }
-    }, [userRank, activePet, hasHatchedPet]);
+    }, [userRank, activePet, hasHatchedPet, isLoadingUserData]);
 
     // Start idle animations when bird is visible and not moving/selected
     useEffect(() => {
@@ -346,8 +432,9 @@ function Header({ username, isTimerActive }) {
         };
     }, [birdSelected, birdVisible, isMoving, userRank, activePet]);
 
-    const handleEggClick = () => {
-        console.log('Egg clicked! Spawning bird...');
+    const handleEggClick = async () => {
+        
+        // Update states immediately
         setHasHatchedPet(true);
         setBirdVisible(true);
         setBirdPosition({ x: 200, y: 150 }); 
@@ -355,6 +442,15 @@ function Header({ username, isTimerActive }) {
         
         // Set the active pet to the current rank
         setActivePet(userRank);
+        
+        // Save to database immediately
+        const petData = {
+            hasHatched: true,
+            unlockedPets: unlockedPets,
+            activePet: userRank
+        };
+        
+        await updatePetDataInDB(petData);
     };
 
     const handleBirdClick = (e) => {
@@ -394,40 +490,6 @@ function Header({ username, isTimerActive }) {
                 return '';
         }
     };
-
-    useEffect(() => {
-        const fetchUserAvatar = async () => {
-            try {
-                const token = localStorage.getItem('userToken');
-                if (!token) return;
-
-                const response = await fetch(`http://localhost:5000/profile/${username}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.avatar && animalAvatars[data.avatar]) {
-                        setUserAvatar(data.avatar);
-                    }
-                    
-                    // Calculate and set user rank based on total time studied
-                    const totalHours = data.totalTimeStudied / 60;
-                    const rank = getUserRank(totalHours);
-                    setUserRank(rank);
-                }
-            } catch (error) {
-                console.error('Error fetching user avatar:', error);
-            }
-        };
-
-        if (username) {
-            fetchUserAvatar();
-        }
-    }, [username]);
 
     const handleLogout = () => {
         if (isTimerActive) {
@@ -470,9 +532,27 @@ function Header({ username, isTimerActive }) {
         setShowPetModal(true);
     };
 
+    // Show loading state if still fetching user data
+    if (isLoadingUserData) {
+        return (
+            <nav className="w-full h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm relative">
+                <div className="flex items-center gap-4">
+                    <h1 className="bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent text-3xl md:text-4xl font-bold tracking-tight">
+                        Yeld
+                    </h1>
+                    <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-zinc-700 animate-pulse"></div>
+                        <span className="text-gray-400">Loading...</span>
+                    </div>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-zinc-700 animate-pulse"></div>
+            </nav>
+        );
+    }
+
     return (
         <>
-            <style jsx>{`
+            <style jsx="true" global="true">{`
                 @keyframes bounce-subtle {
                     0%, 100% { transform: translateY(0px) rotate(0deg); }
                     50% { transform: translateY(-5px) rotate(0deg); }

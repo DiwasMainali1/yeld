@@ -30,20 +30,23 @@ export const SessionProvider = ({ children }) => {
     checkExistingSession();
   }, []);
 
-  // Poll for session updates when in an active session
+  // ENHANCED: More frequent polling when session is not started but user is in session
   useEffect(() => {
     let intervalId;
     
     if (isInSession && session && !sessionCompleted) {
+      // Poll more frequently if session hasn't started yet (participants waiting for host)
+      const pollInterval = sessionStarted ? 2000 : 1000; // 1s when waiting, 2s when active
+      
       intervalId = setInterval(() => {
         checkSessionStatus();
-      }, 2000);
+      }, pollInterval);
     }
     
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isInSession, session, sessionCompleted]);
+  }, [isInSession, session, sessionCompleted, sessionStarted]);
 
   const checkExistingSession = async () => {
     try {
@@ -114,8 +117,10 @@ export const SessionProvider = ({ children }) => {
     return avatar;
   };
 
-  // Update all session state from session data
+  // ENHANCED: Better session state synchronization
   const updateSessionState = async (sessionData, userId) => {
+    const wasSessionStarted = sessionStarted;
+    
     setSession(sessionData);
     setIsInSession(true);
     
@@ -127,7 +132,8 @@ export const SessionProvider = ({ children }) => {
     const userIsCreator = currentUserId && sessionData.creator === currentUserId;
     setIsCreator(userIsCreator);
     
-    setSessionStarted(sessionData.isActive);
+    const isSessionActive = sessionData.isActive;
+    setSessionStarted(isSessionActive);
     setSessionDuration(sessionData.duration);
     
     // Reset completion flag when updating session state
@@ -136,9 +142,37 @@ export const SessionProvider = ({ children }) => {
     // Set up participants list with avatars
     await updateParticipantsListWithAvatars(sessionData, currentUserId);
     
+    // CRITICAL: Handle session start synchronization for participants
+    if (isSessionActive && !wasSessionStarted && !userIsCreator) {
+      console.log('🚀 Session started detected by participant, syncing timer...');
+      
+      // Calculate server time offset if we have server time data
+      if (sessionData.serverTime) {
+        const serverTime = new Date(sessionData.serverTime).getTime();
+        const clientTime = Date.now();
+        const offset = serverTime - clientTime;
+        setServerTimeOffset(offset);
+        console.log("Server time offset set to:", offset);
+      }
+      
+      // Set session expiry from the provided data
+      if (sessionData.expiresAt) {
+        const expiryTime = new Date(sessionData.expiresAt);
+        setSessionExpiry(expiryTime);
+        console.log("Session expiry set to:", expiryTime.toISOString());
+      } else if (sessionData.startTime) {
+        // Fallback: calculate expiry from start time + duration
+        const startTime = new Date(sessionData.startTime);
+        const expiryTime = new Date(startTime.getTime() + sessionData.duration * 1000);
+        setSessionExpiry(expiryTime);
+        console.log("Session expiry calculated:", expiryTime.toISOString());
+      }
+    }
+    
     // If session is already active, set the expiry time
-    if (sessionData.isActive && sessionData.startTime) {
-      const expiryTime = new Date(sessionData.expiresAt);
+    if (isSessionActive && sessionData.startTime) {
+      const expiryTime = new Date(sessionData.expiresAt || 
+        new Date(sessionData.startTime).getTime() + sessionData.duration * 1000);
       setSessionExpiry(expiryTime);
     }
   };
@@ -219,6 +253,7 @@ export const SessionProvider = ({ children }) => {
     setParticipantAvatars(avatarMap);
   };
 
+  // ENHANCED: Better session status checking with session start detection
   const checkSessionStatus = useCallback(async () => {
     if (!session || sessionCompleted) return;
     
@@ -230,9 +265,7 @@ export const SessionProvider = ({ children }) => {
         }
       });
       
-      // If session is not found (404), it means it was deleted
       if (response.status === 404) {
-        console.log('Session not found, resetting session state');
         resetSessionState();
         return;
       }
@@ -240,16 +273,34 @@ export const SessionProvider = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
         
-        // If session expired, mark as completed and reset
         if (data.expired) {
-          console.log('Session expired, marking as completed');
           setSessionCompleted(true);
           
-          // Reset session state after a brief delay to allow for completion handling
           setTimeout(() => {
             resetSessionState();
           }, 1000);
           return;
+        }
+        
+        // CRITICAL: Check for session start changes
+        const wasSessionActive = sessionStarted;
+        const isNowActive = data.isActive;
+        
+        if (isNowActive && !wasSessionActive && !isCreator) {
+          console.log('🎯 Session start detected in status check!');
+          
+          // Update session state with the new active status
+          const updatedSessionData = {
+            ...session,
+            isActive: isNowActive,
+            startTime: data.startTime,
+            expiresAt: data.expiresAt,
+            serverTime: data.serverTime
+          };
+          
+          // This will trigger the timer sync in updateSessionState
+          await updateSessionState(updatedSessionData, localStorage.getItem('userId'));
+          return; // Early return since updateSessionState handles everything
         }
         
         setParticipants(data.participants.length + 1);
@@ -260,11 +311,6 @@ export const SessionProvider = ({ children }) => {
           });
         }
         
-        if (data.creatorUsername) {
-          localStorage.setItem('creatorName', data.creatorUsername);
-        }
-        
-        // Update participants list with full data including avatars
         const currentUserId = localStorage.getItem('userId');
         await updateParticipantsListWithAvatars({
           ...session,
@@ -274,39 +320,11 @@ export const SessionProvider = ({ children }) => {
           participantAvatars: data.participantAvatars,
           creatorAvatar: data.creatorAvatar
         }, currentUserId);
-        
-        // Handle session status updates
-        if (!sessionStarted && data.isActive) {
-          setSessionStarted(true);
-          setSessionCompleted(false); // Reset completion flag when session starts
-          
-          if (data.startTime) {
-            // Set session expiry for timer calculations
-            const expiryTime = data.expiresAt 
-              ? new Date(data.expiresAt) 
-              : new Date(new Date(data.startTime).getTime() + sessionDuration * 1000);
-              
-            setSessionExpiry(expiryTime);
-            
-            // Update session object with timing data
-            setSession(prev => ({
-              ...prev,
-              startTime: data.startTime,
-              expiresAt: data.expiresAt || expiryTime.toISOString()
-            }));
-          }
-        }
-        
-        // Handle deleted sessions
-        if (data.deleted) {
-          console.log('Session was deleted, resetting state');
-          resetSessionState();
-        }
       }
     } catch (error) {
       console.error('Error checking session status:', error);
     }
-  }, [session, sessionStarted, sessionDuration, sessionCompleted]);
+  }, [session, sessionCompleted, sessionStarted, isCreator]);
 
 const resetSessionState = () => {
   console.log('Resetting session state');
@@ -527,7 +545,8 @@ const resetSessionState = () => {
         checkSessionStatus,
         markSessionCompleted,
         fetchUserAvatar: getCachedAvatar,
-        refreshUserAvatar
+        refreshUserAvatar,
+        resetSessionState
       }}
     >
       {children}

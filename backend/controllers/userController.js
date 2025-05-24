@@ -89,25 +89,37 @@ const getDashboard = async (req, res) => {
     }
 };
 
+// UPDATED: Now includes background in profile response
 const getProfile = async (req, res) => {
     try {
-        const user = await User.findOne({ username: req.params.username });
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const { username } = req.params;
+        const currentUserId = req.user.id;
+        
+        const user = await User.findOne({ username }).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
-        const profile = {
+        const isOwnProfile = user._id.toString() === currentUserId;
+        
+        const response = {
             username: user.username,
             avatar: user.avatar,
-            background: user.background, // Add this line to include background in the response
             sessionsCompleted: user.sessionsCompleted,
             totalTimeStudied: user.totalTimeStudied,
-            taskHistory: user.taskHistory,
             createdAt: user.createdAt,
-            isOwnProfile: req.user._id.equals(user._id),
-            timerSettings: user.timerSettings
+            taskHistory: isOwnProfile ? user.taskHistory : [],
+            isOwnProfile,
+            petData: user.petData || { hasHatched: false, unlockedPets: ['novice'], activePet: null },
+            // ADDED: Include background and timer settings for own profile
+            background: isOwnProfile ? user.background : undefined,
+            timerSettings: isOwnProfile ? user.timerSettings : undefined
         };
 
-        res.json(profile);
+        res.json(response);
     } catch (error) {
+        console.error('Error fetching profile:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -140,9 +152,7 @@ const updateSessionStats = async (req, res) => {
     }
 };
 
-// @desc    Update user profile
-// @route   PUT /profile/update
-// @access  Private
+// UPDATED: Enhanced profile update with better background handling
 const updateProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
@@ -151,7 +161,7 @@ const updateProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const { username, avatar, currentPassword, newPassword, timerSettings } = req.body;
+        const { username, avatar, currentPassword, newPassword, timerSettings, background } = req.body;
 
         // Check if username is being changed
         if (username && username !== user.username) {
@@ -186,6 +196,22 @@ const updateProfile = async (req, res) => {
             if (timerSettings.longBreak) user.timerSettings.longBreak = timerSettings.longBreak;
         }
 
+        // ENHANCED: Better background handling with validation
+        if (background !== undefined) {
+            const validBackgrounds = [
+                'default', 'cafe', 'fireplace', 'forest', 'galaxy', 
+                'ghibli', 'midnight', 'ocean', 'spirited', 'sunset'
+            ];
+            
+            if (validBackgrounds.includes(background)) {
+                user.background = background;
+            } else {
+                return res.status(400).json({ 
+                    message: 'Invalid background selection'
+                });
+            }
+        }
+
         // Handle password change if provided
         if (currentPassword && newPassword) {
             const isMatch = await user.matchPassword(currentPassword);
@@ -203,9 +229,7 @@ const updateProfile = async (req, res) => {
 
             user.password = newPassword;
         }
-        if (req.body.background !== undefined) {
-            user.background = req.body.background;
-        }
+
         await user.save();
 
         // Send response without sensitive information
@@ -214,12 +238,15 @@ const updateProfile = async (req, res) => {
             avatar: user.avatar,
             usernameChanges: user.usernameChanges,
             timerSettings: user.timerSettings,
-            background: user.background
+            background: user.background,
+            message: 'Profile updated successfully'
         });
     } catch (error) {
+        console.error('Error updating profile:', error);
         res.status(400).json({ message: error.message });
     }
 };
+
 // @desc    Get leaderboard data
 // @route   GET /leaderboard
 // @access  Private
@@ -267,6 +294,28 @@ const getLeaderboard = async (req, res) => {
     }
 };
 
+const updatePetData = async (req, res) => {
+    try {
+        const { petData } = req.body;
+        const userId = req.user.id;
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { petData: petData },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({ message: 'Pet data updated successfully', petData: user.petData });
+    } catch (error) {
+        console.error('Error updating pet data:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 export { 
     registerUser, 
     loginUser, 
@@ -274,5 +323,6 @@ export {
     getProfile, 
     updateSessionStats, 
     updateProfile,
-    getLeaderboard  
+    getLeaderboard,
+    updatePetData
 };

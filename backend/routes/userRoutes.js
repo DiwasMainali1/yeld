@@ -7,6 +7,7 @@ import {
     getProfile, 
     updateSessionStats, 
     updateProfile,
+    updatePetData,  
     getLeaderboard
 } from '../controllers/userController.js';
 
@@ -19,6 +20,6 @@ router.get('/dashboard', protect, getDashboard);
 router.get('/profile/:username', protect, getProfile);
 router.post('/session/complete', protect, updateSessionStats);
 router.put('/profile/update', protect, updateProfile);
-router.get('/leaderboard', protect, getLeaderboard);
+router.put('/profile/update-pet-data', protect, updatePetData);  
 
 export default router;
