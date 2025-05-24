@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trophy, Menu, X } from 'lucide-react';
+import { LogOut, Trophy, Menu, X, Hand, Plane } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import LeaderboardModal from './custom-components/LeaderboardModal';
 
@@ -22,7 +22,7 @@ import masterGif from './pet-components/pet-assets/master.gif';
 import masterIdlePng from './pet-components/pet-assets/master-idle.png';
 
 import PetModal from './pet-components/PetModal';
-import PetSelectionModal from './pet-components/PetSelectionModal'; // New component
+import PetSelectionModal from './pet-components/PetSelectionModal';
 
 const animalAvatars = {
   fox: foxImage,
@@ -61,19 +61,28 @@ const birdAssets = {
   }
 };
 
-// Thought bubble messages for each pet type
+// Enhanced thought bubble messages for each pet type
 const thoughtBubbles = {
-  novice: ["🌱", "📚", "💭", "⭐"],
-  apprentice: ["⚡", "🔥", "✨", "🎯"],
-  scholar: ["🧠", "💡", "🔮", "🌟"],
-  sage: ["🧙‍♂️", "🌙", "💫", "🔱"],
-  master: ["👑", "💎", "🦅", "⚡", "🌈", "🔥"]
+  novice: ["🌱", "📚", "💭", "⭐", "🔍"],
+  apprentice: ["⚡", "🔥", "✨", "🎯", "💎"],
+  scholar: ["🧠", "💡", "🔮", "🌟", "📖"],
+  sage: ["🧙‍♂️", "🌙", "💫", "🔱", "🦉"],
+  master: ["👑", "💎", "🦅", "⚡", "🌈", "🔥", "🎭", "🎪"]
+};
+
+// Pet interaction messages
+const petMessages = {
+  novice: ["Chirp! 🐣", "So gentle! 💚", "Learning from you! 📚", "Happy chirps! 🎵"],
+  apprentice: ["Magical touch! ✨", "Power grows! ⚡", "Sparkling joy! 💎", "Energy surges! 🔋"],
+  scholar: ["Wisdom shared! 🔮", "Mind connection! 🧠", "Knowledge flows! 📚", "Enlightened! 💡"],
+  sage: ["Ancient bond! 🌙", "Mystical harmony! 🔱", "Sacred touch! ✨", "Cosmic alignment! 🌟"],
+  master: ["LEGENDARY BOND! 👑", "DIVINE CONNECTION! ⚡", "ULTIMATE POWER! 🌈", "TRANSCENDENT! 🎭"]
 };
 
 function Header({ username, isTimerActive }) {
     const navigate = useNavigate();
     const [userAvatar, setUserAvatar] = useState('fox');
-    const [userRank, setUserRank] = useState('novice'); // Track user's rank
+    const [userRank, setUserRank] = useState('novice');
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -86,6 +95,7 @@ function Header({ username, isTimerActive }) {
     const [activePet, setActivePet] = useState(null);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
     
+    // Enhanced bird state
     const [birdVisible, setBirdVisible] = useState(false);
     const [birdPosition, setBirdPosition] = useState({ x: 200, y: 200 });
     const [birdSelected, setBirdSelected] = useState(false);
@@ -94,19 +104,27 @@ function Header({ username, isTimerActive }) {
     const [birdRotation, setBirdRotation] = useState(0);
     const [showTrail, setShowTrail] = useState(false);
     const [trailPositions, setTrailPositions] = useState([]);
+    const [interactionMode, setInteractionMode] = useState('pet'); // 'pet' or 'fly'
     
     // Enhanced animation states
     const [showThoughtBubble, setShowThoughtBubble] = useState(false);
     const [currentThought, setCurrentThought] = useState('');
     const [idleAnimation, setIdleAnimation] = useState('');
     const [auraParticles, setAuraParticles] = useState([]);
-    const [masterLightning, setMasterLightning] = useState([]);
+    const [masterEffects, setMasterEffects] = useState([]);
+    const [petEffect, setPetEffect] = useState(null);
+    const [backgroundGlow, setBackgroundGlow] = useState(false);
+    const [orbitalElements, setOrbitalElements] = useState([]);
+    const [magicCircles, setMagicCircles] = useState([]);
+    const [prismaticBeams, setPrismaticBeams] = useState([]);
+    const [dimensionalRifts, setDimensionalRifts] = useState([]);
     
     const birdRef = useRef(null);
     const animationRef = useRef(null);
     const idleTimerRef = useRef(null);
     const thoughtTimerRef = useRef(null);
     const auraTimerRef = useRef(null);
+    const effectsTimerRef = useRef(null);
 
     const MOVEMENT_SPEED = 200;
 
@@ -121,91 +139,166 @@ function Header({ username, isTimerActive }) {
         return 'novice';
     };
 
-    // Get pet-specific effects
+    // Enhanced pet effects with professional quality
     const getPetEffects = (petType) => {
         switch(petType) {
             case 'novice':
                 return {
-                    filter: 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.6)) drop-shadow(1px 1px 2px rgba(0,0,0,0.5))',
-                    auraColor: 'rgba(34, 197, 94, 0.3)',
+                    filter: 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.4))',
+                    auraColor: 'rgba(34, 197, 94, 0.2)',
                     trailColor: 'rgb(34, 197, 94)',
-                    glowColor: 'rgba(34, 197, 94, 0.8)'
+                    glowColor: 'rgba(34, 197, 94, 0.6)',
+                    backgroundGlow: 'radial-gradient(circle at center, rgba(34, 197, 94, 0.1) 0%, transparent 70%)'
                 };
             case 'apprentice':
                 return {
-                    filter: 'drop-shadow(0 0 12px rgba(59, 130, 246, 0.7)) drop-shadow(0 0 6px rgba(147, 51, 234, 0.5)) drop-shadow(1px 1px 2px rgba(0,0,0,0.5))',
-                    auraColor: 'rgba(59, 130, 246, 0.4)',
+                    filter: 'drop-shadow(0 0 12px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 6px rgba(147, 51, 234, 0.4))',
+                    auraColor: 'rgba(59, 130, 246, 0.3)',
                     trailColor: 'rgb(59, 130, 246)',
-                    glowColor: 'rgba(59, 130, 246, 0.9)'
+                    glowColor: 'rgba(59, 130, 246, 0.8)',
+                    backgroundGlow: 'radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.1) 50%, transparent 70%)'
                 };
             case 'scholar':
                 return {
-                    filter: 'drop-shadow(0 0 15px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 8px rgba(236, 72, 153, 0.6)) drop-shadow(1px 1px 2px rgba(0,0,0,0.5))',
-                    auraColor: 'rgba(168, 85, 247, 0.1)',
+                    filter: 'drop-shadow(0 0 15px rgba(168, 85, 247, 0.7)) drop-shadow(0 0 8px rgba(236, 72, 153, 0.5))',
+                    auraColor: 'rgba(168, 85, 247, 0.4)',
                     trailColor: 'rgb(168, 85, 247)',
-                    glowColor: 'rgba(168, 85, 247, 1)'
+                    glowColor: 'rgba(168, 85, 247, 0.9)',
+                    backgroundGlow: 'radial-gradient(circle at center, rgba(168, 85, 247, 0.2) 0%, rgba(236, 72, 153, 0.15) 50%, transparent 70%)'
                 };
             case 'sage':
                 return {
-                    filter: 'drop-shadow(0 0 20px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 146, 60, 0.7)) drop-shadow(0 0 5px rgba(239, 68, 68, 0.5)) drop-shadow(1px 1px 2px rgba(0,0,0,0.5))',
-                    auraColor: 'rgba(251, 191, 36, 0.6)',
+                    filter: 'drop-shadow(0 0 20px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 10px rgba(251, 146, 60, 0.6)) drop-shadow(0 0 5px rgba(239, 68, 68, 0.4))',
+                    auraColor: 'rgba(251, 191, 36, 0.5)',
                     trailColor: 'rgb(251, 191, 36)',
-                    glowColor: 'rgba(251, 191, 36, 1)'
+                    glowColor: 'rgba(251, 191, 36, 1)',
+                    backgroundGlow: 'radial-gradient(circle at center, rgba(251, 191, 36, 0.25) 0%, rgba(251, 146, 60, 0.2) 40%, rgba(239, 68, 68, 0.15) 70%, transparent 90%)'
                 };
             case 'master':
                 return {
-                    filter: 'drop-shadow(0 0 15px rgba(255, 69, 0, 0.8)) drop-shadow(0 0 10px rgba(255, 140, 0, 0.6)) drop-shadow(0 0 8px rgba(255, 165, 0, 0.5)) drop-shadow(0 0 5px rgba(255, 215, 0, 0.4)) drop-shadow(1px 1px 3px rgba(0,0,0,0.6))',
-                    auraColor: 'rgba(255, 69, 0, 0.4)',
+                    filter: 'drop-shadow(0 0 25px rgba(255, 69, 0, 0.9)) drop-shadow(0 0 15px rgba(255, 140, 0, 0.7)) drop-shadow(0 0 10px rgba(255, 165, 0, 0.6)) drop-shadow(0 0 5px rgba(255, 215, 0, 0.5))',
+                    auraColor: 'rgba(255, 69, 0, 0.6)',
                     trailColor: 'rgb(255, 69, 0)',
-                    glowColor: 'rgba(255, 69, 0, 0.8)'
+                    glowColor: 'rgba(255, 69, 0, 1)',
+                    backgroundGlow: 'radial-gradient(circle at center, rgba(255, 69, 0, 0.3) 0%, rgba(255, 140, 0, 0.25) 30%, rgba(255, 165, 0, 0.2) 50%, rgba(255, 215, 0, 0.15) 70%, transparent 90%)'
                 };
             default:
                 return {
-                    filter: 'drop-shadow(0 0 15px rgba(251, 191, 36, 0.8)) drop-shadow(1px 1px 2px rgba(0,0,0,0.5))',
-                    auraColor: 'rgba(251, 191, 36, 0.4)',
+                    filter: 'drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))',
+                    auraColor: 'rgba(251, 191, 36, 0.3)',
                     trailColor: 'rgb(251, 191, 36)',
-                    glowColor: 'rgba(251, 191, 36, 0.8)'
+                    glowColor: 'rgba(251, 191, 36, 0.8)',
+                    backgroundGlow: 'radial-gradient(circle at center, rgba(251, 191, 36, 0.2) 0%, transparent 70%)'
                 };
         }
     };
 
-    // Generate aura particles for higher-tier pets
+    // Generate enhanced aura particles
     const generateAuraParticles = (petType) => {
-        if (petType === 'novice' || petType === 'apprentice') return;
+        if (petType === 'novice') return;
         
-        const particleCount = petType === 'master' ? 8 : petType === 'sage' ? 6 : 4;
+        const configs = {
+            apprentice: { count: 4, distance: 15, speed: 1.5, size: 4 },
+            scholar: { count: 6, distance: 20, speed: 2, size: 5 },
+            sage: { count: 8, distance: 25, speed: 2.5, size: 6 },
+            master: { count: 12, distance: 30, speed: 3, size: 8 }
+        };
+        
+        const config = configs[petType] || configs.apprentice;
         const particles = [];
         
-        for (let i = 0; i < particleCount; i++) {
+        for (let i = 0; i < config.count; i++) {
             particles.push({
                 id: i,
-                angle: (360 / particleCount) * i,
-                distance: petType === 'master' ? 10 : 10,
-                speed: petType === 'master' ? 2 : 1,
-                size: petType === 'master' ? 8 : 6,
-                opacity: Math.random() * 0.7 + 0.3
+                angle: (360 / config.count) * i,
+                distance: config.distance + Math.random() * 10,
+                speed: config.speed + Math.random() * 0.5,
+                size: config.size + Math.random() * 2,
+                opacity: Math.random() * 0.6 + 0.4,
+                phase: Math.random() * Math.PI * 2
             });
         }
         
         setAuraParticles(particles);
     };
 
-    // Generate lightning effects for master
-    const generateMasterLightning = () => {
-        const lightning = [];
-        for (let i = 0; i < 3; i++) {
-            lightning.push({
+    // Generate orbital elements for higher tiers
+    const generateOrbitalElements = (petType) => {
+        if (petType === 'novice' || petType === 'apprentice') return;
+        
+        const elements = [];
+        const count = petType === 'master' ? 6 : petType === 'sage' ? 4 : 3;
+        
+        for (let i = 0; i < count; i++) {
+            elements.push({
                 id: i,
-                startX: Math.random() * 100 - 50,
-                startY: Math.random() * 100 - 50,
-                endX: Math.random() * 200 - 100,
-                endY: Math.random() * 200 - 100,
-                opacity: Math.random() * 0.8 + 0.2
+                radius: 40 + i * 15,
+                speed: 1 + i * 0.3,
+                angle: (360 / count) * i,
+                size: petType === 'master' ? 6 : 4,
+                opacity: 0.7 - i * 0.1
             });
         }
-        setMasterLightning(lightning);
         
-        setTimeout(() => setMasterLightning([]), 200);
+        setOrbitalElements(elements);
+    };
+
+    // Generate magic circles for sage and master
+    const generateMagicCircles = (petType) => {
+        if (petType !== 'sage' && petType !== 'master') return;
+        
+        const circles = [];
+        const count = petType === 'master' ? 3 : 2;
+        
+        for (let i = 0; i < count; i++) {
+            circles.push({
+                id: i,
+                radius: 60 + i * 30,
+                rotation: 0,
+                speed: 0.5 + i * 0.3,
+                opacity: 0.3 - i * 0.1,
+                strokeWidth: petType === 'master' ? 3 : 2
+            });
+        }
+        
+        setMagicCircles(circles);
+    };
+
+    // Generate prismatic beams for master
+    const generatePrismaticBeams = () => {
+        const beams = [];
+        for (let i = 0; i < 8; i++) {
+            beams.push({
+                id: i,
+                angle: (360 / 8) * i,
+                length: 100 + Math.random() * 50,
+                width: 2 + Math.random() * 2,
+                opacity: 0.4 + Math.random() * 0.4,
+                color: `hsl(${(360 / 8) * i}, 80%, 60%)`
+            });
+        }
+        setPrismaticBeams(beams);
+        
+        setTimeout(() => setPrismaticBeams([]), 3000);
+    };
+
+    // Generate dimensional rifts for master ultimate animation
+    const generateDimensionalRifts = () => {
+        const rifts = [];
+        for (let i = 0; i < 5; i++) {
+            rifts.push({
+                id: i,
+                x: Math.random() * 200 - 100,
+                y: Math.random() * 200 - 100,
+                width: 3 + Math.random() * 4,
+                height: 40 + Math.random() * 60,
+                rotation: Math.random() * 360,
+                opacity: 0.6 + Math.random() * 0.4
+            });
+        }
+        setDimensionalRifts(rifts);
+        
+        setTimeout(() => setDimensionalRifts([]), 2000);
     };
 
     const updatePetDataInDB = async (petData) => {
@@ -263,17 +356,14 @@ function Header({ username, isTimerActive }) {
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Set avatar
                     if (data.avatar && animalAvatars[data.avatar]) {
                         setUserAvatar(data.avatar);
                     }
                     
-                    // Calculate and set user rank based on total time studied
                     const totalHours = data.totalTimeStudied / 60;
                     const rank = getUserRank(totalHours);
                     setUserRank(rank);
                     
-                    // Set pet data from database with proper fallbacks
                     const petData = data.petData || {};
                     
                     const hasHatched = petData.hasHatched || false;
@@ -284,8 +374,6 @@ function Header({ username, isTimerActive }) {
                     setUnlockedPets(unlocked);
                     setActivePet(active);
                     
-                    
-                    // Show bird if hatched and has active pet
                     if (hasHatched && active) {
                         setBirdVisible(true);
                     }
@@ -302,12 +390,10 @@ function Header({ username, isTimerActive }) {
         fetchUserData();
     }, [username]);
 
-    // Save pet data to database whenever it changes (but not on initial load)
+    // Save pet data to database whenever it changes
     useEffect(() => {
-        // Skip saving during initial load
         if (isLoadingUserData || !username) return;
         
-        // Only save if we have meaningful pet data changes
         if (hasHatchedPet || unlockedPets.length > 1 || activePet) {
             const petData = {
                 hasHatched: hasHatchedPet,
@@ -318,37 +404,34 @@ function Header({ username, isTimerActive }) {
         }
     }, [hasHatchedPet, unlockedPets, activePet, username, isLoadingUserData]);
 
-    // Get current bird assets based on rank or active pet
+    // Get current bird assets
     const getCurrentBirdAssets = () => {
-        // If there's a specific active pet selected, use that
         if (activePet && birdAssets[activePet]) {
             return birdAssets[activePet];
         }
-        // Otherwise use rank-based pet
         return birdAssets[userRank] || birdAssets.novice;
     };
 
-    // Get current pet type for effects
+    // Get current pet type
     const getCurrentPetType = () => {
         return activePet || userRank;
     };
 
-    // Determine which image to show based on state and rank
+    // Enhanced bird image logic
     const getBirdImage = () => {
         const assets = getCurrentBirdAssets();
+        const currentPet = getCurrentPetType();
         
-        // For master rank, only show gif when selected, no movement
-        if (userRank === 'master' || (activePet === 'master')) {
-            return birdSelected ? assets.gif : assets.idle;
+        // Show gif when selected, moving, or during pet effect
+        if (birdSelected || isMoving || petEffect) {
+            return assets.gif;
         }
         
-        // For other ranks, show gif when selected or moving
-        return (birdSelected || isMoving) ? assets.gif : assets.idle;
+        return assets.idle;
     };
 
     // Update unlocked pets based on rank
     useEffect(() => {
-        // Skip during initial load
         if (isLoadingUserData) return;
 
         const newUnlockedPets = ['novice']; 
@@ -368,73 +451,76 @@ function Header({ username, isTimerActive }) {
         
         setUnlockedPets(newUnlockedPets);
         
-        // If no active pet is set and the pet has hatched, set it to the current rank
         if (!activePet && hasHatchedPet) {
             setActivePet(userRank);
         }
     }, [userRank, activePet, hasHatchedPet, isLoadingUserData]);
 
-    // Generate aura particles when pet changes
+    // Generate effects when pet changes
     useEffect(() => {
         if (birdVisible) {
             const currentPet = getCurrentPetType();
             generateAuraParticles(currentPet);
+            generateOrbitalElements(currentPet);
+            generateMagicCircles(currentPet);
         }
     }, [birdVisible, activePet, userRank]);
 
-    // Start idle animations when bird is visible and not moving/selected
+    // Enhanced idle animations
     useEffect(() => {
-        if (birdVisible && !isMoving && !birdSelected) {
+        if (birdVisible && !isMoving && !birdSelected && !petEffect) {
             const currentPet = getCurrentPetType();
             
-            // Pet-specific animations
             const startIdleAnimations = () => {
                 let animations = [];
                 
                 switch(currentPet) {
                     case 'novice':
-                        animations = ['bounce-subtle', 'sway'];
+                        animations = ['gentle-bounce', 'subtle-sway', 'curious-tilt'];
                         break;
                     case 'apprentice':
-                        animations = ['electric-pulse', 'bounce-subtle', 'sway'];
+                        animations = ['energy-pulse', 'electric-bounce', 'power-sway', 'spark-dance'];
                         break;
                     case 'scholar':
-                        animations = ['wisdom-glow', 'float-gentle', 'sway'];
+                        animations = ['wisdom-float', 'knowledge-glow', 'mystic-sway', 'scholar-meditation'];
                         break;
                     case 'sage':
-                        animations = ['mystical-aura', 'float-gentle', 'cosmic-pulse'];
+                        animations = ['celestial-float', 'cosmic-pulse', 'ancient-wisdom', 'stellar-dance'];
                         break;
                     case 'master':
-                        animations = ['royal-presence', 'lightning-aura', 'divine-float'];
+                        animations = ['legendary-presence', 'divine-ascension', 'reality-warp', 'dimensional-shift', 'prismatic-aura'];
                         break;
                     default:
-                        animations = ['bounce-subtle', 'sway'];
+                        animations = ['gentle-bounce', 'subtle-sway'];
                 }
                 
-                // Random delay before starting animation (2-5 seconds)
-                const randomDelay = Math.random() * 3000 + 2000;
+                const randomDelay = Math.random() * 4000 + 3000;
                 
                 idleTimerRef.current = setTimeout(() => {
                     const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
                     setIdleAnimation(randomAnimation);
                     
-                    // Special effects for master
-                    if (currentPet === 'master' && randomAnimation === 'lightning-aura') {
-                        generateMasterLightning();
+                    // Special effects for high-tier pets
+                    if (currentPet === 'master') {
+                        if (randomAnimation === 'prismatic-aura') {
+                            generatePrismaticBeams();
+                        } else if (randomAnimation === 'dimensional-shift') {
+                            generateDimensionalRifts();
+                        }
+                        setBackgroundGlow(true);
+                    } else if (currentPet === 'sage') {
+                        setBackgroundGlow(true);
                     }
                     
-                    // Animation duration based on pet type
-                    const duration = currentPet === 'master' ? 6000 : 4000;
+                    const duration = currentPet === 'master' ? 8000 : currentPet === 'sage' ? 6000 : 4000;
                     
-                    // Clear animation after it completes, THEN schedule next one
                     setTimeout(() => {
                         setIdleAnimation('');
+                        setBackgroundGlow(false);
                         
-                        // Schedule next animation only after current one is completely done
-                        // Add a small gap between animations (1-2 seconds)
-                        const gapBetweenAnimations = Math.random() * 1000 + 1000;
+                        const gapBetweenAnimations = Math.random() * 2000 + 1500;
                         setTimeout(() => {
-                            startIdleAnimations(); // Recursive call for next animation
+                            startIdleAnimations();
                         }, gapBetweenAnimations);
                         
                     }, duration);
@@ -442,9 +528,9 @@ function Header({ username, isTimerActive }) {
                 }, randomDelay);
             };
 
-            // Pet-specific thought bubbles
+            // Enhanced thought bubbles
             const startThoughtBubbles = () => {
-                const randomDelay = Math.random() * 10000 + 8000;
+                const randomDelay = Math.random() * 12000 + 10000;
                 
                 thoughtTimerRef.current = setTimeout(() => {
                     const petThoughts = thoughtBubbles[currentPet] || thoughtBubbles.novice;
@@ -452,29 +538,40 @@ function Header({ username, isTimerActive }) {
                     setCurrentThought(randomThought);
                     setShowThoughtBubble(true);
                     
-                    // Hide thought bubble after 3 seconds
-                    setTimeout(() => setShowThoughtBubble(false), 3000);
+                    setTimeout(() => setShowThoughtBubble(false), 4000);
                     
-                    // Schedule next thought
                     startThoughtBubbles();
                 }, randomDelay);
             };
 
-            // Aura particle animation for higher tiers
+            // Enhanced aura animation
             const startAuraAnimation = () => {
-                if (currentPet === 'scholar' || currentPet === 'sage' || currentPet === 'master') {
-                    const animateAura = () => {
-                        setAuraParticles(prevParticles => 
-                            prevParticles.map(particle => ({
-                                ...particle,
-                                angle: (particle.angle + particle.speed) % 360,
-                                opacity: Math.sin(Date.now() * 0.003 + particle.id) * 0.3 + 0.5
-                            }))
-                        );
-                    };
+                const animateAura = () => {
+                    setAuraParticles(prevParticles => 
+                        prevParticles.map(particle => ({
+                            ...particle,
+                            angle: (particle.angle + particle.speed) % 360,
+                            opacity: Math.sin(Date.now() * 0.002 + particle.phase) * 0.3 + 0.5,
+                            distance: particle.distance + Math.sin(Date.now() * 0.001 + particle.phase) * 2
+                        }))
+                    );
                     
-                    auraTimerRef.current = setInterval(animateAura, 50);
-                }
+                    setOrbitalElements(prevElements => 
+                        prevElements.map(element => ({
+                            ...element,
+                            angle: (element.angle + element.speed) % 360
+                        }))
+                    );
+                    
+                    setMagicCircles(prevCircles => 
+                        prevCircles.map(circle => ({
+                            ...circle,
+                            rotation: (circle.rotation + circle.speed) % 360
+                        }))
+                    );
+                };
+                
+                auraTimerRef.current = setInterval(animateAura, 50);
             };
 
             startIdleAnimations();
@@ -487,7 +584,7 @@ function Header({ username, isTimerActive }) {
             if (thoughtTimerRef.current) clearTimeout(thoughtTimerRef.current);
             if (auraTimerRef.current) clearInterval(auraTimerRef.current);
         };
-    }, [birdVisible, isMoving, birdSelected, activePet, userRank]);
+    }, [birdVisible, isMoving, birdSelected, petEffect, activePet, userRank]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -500,8 +597,8 @@ function Header({ username, isTimerActive }) {
         };
     }, []);
 
+    // Enhanced movement animation
     useEffect(() => {
-        // Skip movement animation for master rank
         const currentPetRank = activePet || userRank;
         if (currentPetRank === 'master' || !birdTarget || !isMoving) return;
 
@@ -531,7 +628,7 @@ function Header({ username, isTimerActive }) {
             setBirdPosition({ x: currentX, y: currentY });
             
             trailHistory.push({ x: currentX, y: currentY, time: Date.now() });
-            const recentTrail = trailHistory.filter(pos => Date.now() - pos.time < 500);
+            const recentTrail = trailHistory.filter(pos => Date.now() - pos.time < 800);
             setTrailPositions(recentTrail);
             
             if (rawProgress < 1) {
@@ -557,24 +654,29 @@ function Header({ username, isTimerActive }) {
         };
     }, [birdTarget, isMoving, birdPosition, MOVEMENT_SPEED, userRank, activePet]);
 
+    // Enhanced page click handling
     useEffect(() => {
         const handlePageClick = (e) => {
             const currentPetRank = activePet || userRank;
             if (birdSelected && birdRef.current && !birdRef.current.contains(e.target)) {
-                // For master rank, don't allow movement - just deselect
-                if (currentPetRank === 'master') {
-                    setBirdSelected(false);
-                    return;
+                if (interactionMode === 'fly') {
+                    if (currentPetRank === 'master') {
+                        setBirdSelected(false);
+                        return;
+                    }
+                    
+                    if (isMoving) return;
+                    
+                    const rect = document.body.getBoundingClientRect();
+                    const x = e.clientX - rect.left - 80;
+                    const y = e.clientY - rect.top - 80;
+                    
+                    setBirdTarget({ x, y });
+                    setIsMoving(true);
+                } else {
+                    // Pet mode - trigger petting animation
+                    handlePetInteraction();
                 }
-                
-                if (isMoving) return;
-                
-                const rect = document.body.getBoundingClientRect();
-                const x = e.clientX - rect.left - 80;
-                const y = e.clientY - rect.top - 80;
-                
-                setBirdTarget({ x, y });
-                setIsMoving(true);
             }
             else if (birdRef.current && !birdRef.current.contains(e.target)) {
                 setBirdSelected(false);
@@ -588,20 +690,15 @@ function Header({ username, isTimerActive }) {
         return () => {
             document.removeEventListener('click', handlePageClick);
         };
-    }, [birdSelected, birdVisible, isMoving, userRank, activePet]);
+    }, [birdSelected, birdVisible, isMoving, userRank, activePet, interactionMode]);
 
     const handleEggClick = async () => {
-        
-        // Update states immediately
         setHasHatchedPet(true);
         setBirdVisible(true);
         setBirdPosition({ x: 200, y: 150 }); 
         setShowPetModal(false);
-        
-        // Set the active pet to the current rank
         setActivePet(userRank);
         
-        // Save to database immediately
         const petData = {
             hasHatched: true,
             unlockedPets: unlockedPets,
@@ -613,16 +710,61 @@ function Header({ username, isTimerActive }) {
 
     const handleBirdClick = (e) => {
         e.stopPropagation();
-        if (!isMoving) {
+        if (!isMoving && !petEffect) {
             setBirdSelected(!birdSelected);
         }
+    };
+
+    // Enhanced pet interaction
+    const handlePetInteraction = () => {
+        const currentPet = getCurrentPetType();
+        const messages = petMessages[currentPet] || petMessages.novice;
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        setPetEffect({
+            message: randomMessage,
+            type: currentPet,
+            timestamp: Date.now()
+        });
+        
+        // Enhanced effects based on pet level
+        switch(currentPet) {
+            case 'novice':
+                // Simple heart particles
+                break;
+            case 'apprentice':
+                // Electric sparkles
+                setBackgroundGlow(true);
+                break;
+            case 'scholar':
+                // Wisdom aura expansion
+                setBackgroundGlow(true);
+                break;
+            case 'sage':
+                // Mystical energy waves
+                setBackgroundGlow(true);
+                break;
+            case 'master':
+                // Reality-bending effects
+                generatePrismaticBeams();
+                generateDimensionalRifts();
+                setBackgroundGlow(true);
+                break;
+        }
+        
+        // Clear effect after duration
+        setTimeout(() => {
+            setPetEffect(null);
+            setBackgroundGlow(false);
+        }, currentPet === 'master' ? 5000 : currentPet === 'sage' ? 4000 : 3000);
+        
+        setBirdSelected(false);
     };
 
     const handlePetIconClick = () => {
         if (unlockedPets.length > 1) {
             setShowPetSelectionModal(true);
         } else {
-            // Toggle bird visibility if only one pet
             setBirdVisible(!birdVisible);
         }
     };
@@ -633,34 +775,32 @@ function Header({ username, isTimerActive }) {
         setShowPetSelectionModal(false);
     };
 
-    // Get idle animation classes based on pet type
+    // Enhanced idle animation classes
     const getIdleAnimationClass = () => {
-        const currentPet = getCurrentPetType();
+        const animationMap = {
+            'gentle-bounce': 'animate-gentle-bounce',
+            'subtle-sway': 'animate-subtle-sway',
+            'curious-tilt': 'animate-curious-tilt',
+            'energy-pulse': 'animate-energy-pulse',
+            'electric-bounce': 'animate-electric-bounce',
+            'power-sway': 'animate-power-sway',
+            'spark-dance': 'animate-spark-dance',
+            'wisdom-float': 'animate-wisdom-float',
+            'knowledge-glow': 'animate-knowledge-glow',
+            'mystic-sway': 'animate-mystic-sway',
+            'scholar-meditation': 'animate-scholar-meditation',
+            'celestial-float': 'animate-celestial-float',
+            'cosmic-pulse': 'animate-cosmic-pulse',
+            'ancient-wisdom': 'animate-ancient-wisdom',
+            'stellar-dance': 'animate-stellar-dance',
+            'legendary-presence': 'animate-legendary-presence',
+            'divine-ascension': 'animate-divine-ascension',
+            'reality-warp': 'animate-reality-warp',
+            'dimensional-shift': 'animate-dimensional-shift',
+            'prismatic-aura': 'animate-prismatic-aura'
+        };
         
-        switch(idleAnimation) {
-            case 'bounce-subtle':
-                return 'animate-bounce-subtle';
-            case 'sway':
-                return 'animate-sway';
-            case 'electric-pulse':
-                return 'animate-electric-pulse';
-            case 'wisdom-glow':
-                return 'animate-wisdom-glow';
-            case 'float-gentle':
-                return 'animate-float-gentle';
-            case 'mystical-aura':
-                return 'animate-mystical-aura';
-            case 'cosmic-pulse':
-                return 'animate-cosmic-pulse';
-            case 'royal-presence':
-                return 'animate-royal-presence';
-            case 'lightning-aura':
-                return 'animate-lightning-aura';
-            case 'divine-float':
-                return 'animate-divine-float';
-            default:
-                return '';
-        }
+        return animationMap[idleAnimation] || '';
     };
 
     const handleLogout = () => {
@@ -704,7 +844,7 @@ function Header({ username, isTimerActive }) {
         setShowPetModal(true);
     };
 
-    // Show loading state if still fetching user data
+    // Show loading state
     if (isLoadingUserData) {
         return (
             <nav className="w-full h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm relative">
@@ -725,102 +865,221 @@ function Header({ username, isTimerActive }) {
     return (
         <>
             <style jsx="true" global="true">{`
-                @keyframes bounce-subtle {
-                    0%, 100% { transform: translateY(0px) rotate(0deg); }
-                    50% { transform: translateY(-5px) rotate(0deg); }
+                /* Enhanced Professional Animations */
+                @keyframes gentle-bounce {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-3px); }
                 }
                 
-                @keyframes sway {
-                    0%, 100% { transform: rotate(-2deg); }
-                    50% { transform: rotate(2deg); }
+                @keyframes subtle-sway {
+                    0%, 100% { transform: rotate(-1deg); }
+                    50% { transform: rotate(1deg); }
                 }
                 
-                @keyframes electric-pulse {
+                @keyframes curious-tilt {
+                    0%, 100% { transform: rotate(0deg) scale(1); }
+                    25% { transform: rotate(5deg) scale(1.02); }
+                    75% { transform: rotate(-3deg) scale(1.01); }
+                }
+                
+                @keyframes energy-pulse {
                     0%, 100% { 
-                        filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.7)) drop-shadow(0 0 6px rgba(147, 51, 234, 0.5));
                         transform: scale(1);
+                        filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 6px rgba(147, 51, 234, 0.4));
                     }
                     50% { 
-                        filter: drop-shadow(0 0 20px rgba(59, 130, 246, 1)) drop-shadow(0 0 12px rgba(147, 51, 234, 0.8));
-                        transform: scale(1.05);
+                        transform: scale(1.08);
+                        filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.9)) drop-shadow(0 0 12px rgba(147, 51, 234, 0.7));
                     }
                 }
                 
-                @keyframes wisdom-glow {
+                @keyframes electric-bounce {
+                    0%, 100% { transform: translateY(0px) scale(1); }
+                    25% { transform: translateY(-8px) scale(1.05); }
+                    50% { transform: translateY(-4px) scale(1.03); }
+                    75% { transform: translateY(-6px) scale(1.04); }
+                }
+                
+                @keyframes power-sway {
+                    0%, 100% { transform: rotate(-2deg) scale(1); }
+                    33% { transform: rotate(3deg) scale(1.02); }
+                    66% { transform: rotate(-1deg) scale(1.01); }
+                }
+                
+                @keyframes spark-dance {
+                    0%, 100% { transform: rotate(0deg) translateY(0px); }
+                    25% { transform: rotate(5deg) translateY(-5px); }
+                    50% { transform: rotate(-3deg) translateY(-3px); }
+                    75% { transform: rotate(2deg) translateY(-7px); }
+                }
+                
+                @keyframes wisdom-float {
                     0%, 100% { 
-                        filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 8px rgba(236, 72, 153, 0.6));
-                        transform: translateY(0px);
+                        transform: translateY(0px) scale(1);
+                        filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.7)) drop-shadow(0 0 8px rgba(236, 72, 153, 0.5));
                     }
                     50% { 
-                        filter: drop-shadow(0 0 25px rgba(168, 85, 247, 1)) drop-shadow(0 0 15px rgba(236, 72, 153, 0.9));
-                        transform: translateY(-8px);
+                        transform: translateY(-12px) scale(1.06);
+                        filter: drop-shadow(0 0 25px rgba(168, 85, 247, 1)) drop-shadow(0 0 15px rgba(236, 72, 153, 0.8));
                     }
                 }
                 
-                @keyframes float-gentle {
-                    0%, 100% { transform: translateY(0px) rotate(0deg); }
-                    33% { transform: translateY(-6px) rotate(1deg); }
-                    66% { transform: translateY(-3px) rotate(-1deg); }
-                }
-                
-                @keyframes mystical-aura {
+                @keyframes knowledge-glow {
                     0%, 100% { 
-                        filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 146, 60, 0.7)) drop-shadow(0 0 5px rgba(239, 68, 68, 0.5));
                         transform: scale(1) rotate(0deg);
+                        filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.7));
                     }
-                    25% { 
-                        filter: drop-shadow(0 0 30px rgba(251, 191, 36, 1)) drop-shadow(0 0 15px rgba(251, 146, 60, 0.9)) drop-shadow(0 0 8px rgba(239, 68, 68, 0.7));
-                        transform: scale(1.08) rotate(2deg);
+                    50% { 
+                        transform: scale(1.1) rotate(2deg);
+                        filter: drop-shadow(0 0 30px rgba(168, 85, 247, 1)) drop-shadow(0 0 20px rgba(236, 72, 153, 0.8));
                     }
-                    75% { 
-                        filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 12px rgba(251, 146, 60, 0.8)) drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
-                        transform: scale(1.03) rotate(-1deg);
+                }
+                
+                @keyframes mystic-sway {
+                    0%, 100% { transform: rotate(-3deg) translateY(0px); }
+                    25% { transform: rotate(4deg) translateY(-6px); }
+                    75% { transform: rotate(-2deg) translateY(-3px); }
+                }
+                
+                @keyframes scholar-meditation {
+                    0%, 100% { 
+                        transform: translateY(0px) scale(1) rotate(0deg);
+                        filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+                    }
+                    50% { 
+                        transform: translateY(-8px) scale(1.05) rotate(1deg);
+                        filter: drop-shadow(0 0 35px rgba(168, 85, 247, 1)) drop-shadow(0 0 20px rgba(236, 72, 153, 0.9));
+                    }
+                }
+                
+                @keyframes celestial-float {
+                    0%, 100% { 
+                        transform: translateY(0px) scale(1) rotate(0deg);
+                        filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 10px rgba(251, 146, 60, 0.6));
+                    }
+                    33% { 
+                        transform: translateY(-15px) scale(1.08) rotate(3deg);
+                        filter: drop-shadow(0 0 35px rgba(251, 191, 36, 1)) drop-shadow(0 0 20px rgba(251, 146, 60, 0.9));
+                    }
+                    66% { 
+                        transform: translateY(-8px) scale(1.04) rotate(-2deg);
+                        filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 15px rgba(239, 68, 68, 0.7));
                     }
                 }
                 
                 @keyframes cosmic-pulse {
-                    0%, 100% { transform: translateY(0px) scale(1); }
-                    50% { transform: translateY(-10px) scale(1.1); }
-                }
-                
-                @keyframes royal-presence {
                     0%, 100% { 
-                        filter: drop-shadow(0 0 30px rgba(236, 72, 153, 1)) drop-shadow(0 0 20px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 15px rgba(168, 85, 247, 0.9)) drop-shadow(0 0 10px rgba(251, 191, 36, 0.7));
                         transform: scale(1) translateY(0px);
+                        filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.9));
                     }
-                    33% { 
-                        filter: drop-shadow(0 0 40px rgba(236, 72, 153, 1)) drop-shadow(0 0 30px rgba(59, 130, 246, 1)) drop-shadow(0 0 25px rgba(168, 85, 247, 1)) drop-shadow(0 0 20px rgba(251, 191, 36, 1));
-                        transform: scale(1.15) translateY(-12px);
-                    }
-                    66% { 
-                        filter: drop-shadow(0 0 35px rgba(236, 72, 153, 1)) drop-shadow(0 0 25px rgba(59, 130, 246, 0.9)) drop-shadow(0 0 20px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 15px rgba(251, 191, 36, 0.85));
-                        transform: scale(1.08) translateY(-6px);
+                    50% { 
+                        transform: scale(1.12) translateY(-10px);
+                        filter: drop-shadow(0 0 40px rgba(251, 191, 36, 1)) drop-shadow(0 0 25px rgba(251, 146, 60, 0.8));
                     }
                 }
                 
-                @keyframes lightning-aura {
+                @keyframes ancient-wisdom {
                     0%, 100% { 
-                        filter: drop-shadow(0 0 30px rgba(236, 72, 153, 1)) drop-shadow(0 0 20px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 15px rgba(168, 85, 247, 0.9));
+                        transform: rotate(0deg) scale(1);
+                        filter: drop-shadow(0 0 30px rgba(251, 191, 36, 1));
+                    }
+                    25% { 
+                        transform: rotate(2deg) scale(1.06);
+                        filter: drop-shadow(0 0 45px rgba(251, 191, 36, 1)) drop-shadow(0 0 25px rgba(239, 68, 68, 0.8));
+                    }
+                    75% { 
+                        transform: rotate(-1deg) scale(1.03);
+                        filter: drop-shadow(0 0 35px rgba(251, 146, 60, 1)) drop-shadow(0 0 20px rgba(239, 68, 68, 0.6));
+                    }
+                }
+                
+                @keyframes stellar-dance {
+                    0%, 100% { 
+                        transform: translateY(0px) rotate(0deg) scale(1);
                     }
                     20% { 
-                        filter: drop-shadow(0 0 50px rgba(255, 255, 255, 1)) drop-shadow(0 0 40px rgba(236, 72, 153, 1)) drop-shadow(0 0 30px rgba(59, 130, 246, 1));
+                        transform: translateY(-12px) rotate(5deg) scale(1.08);
                     }
                     40% { 
-                        filter: drop-shadow(0 0 35px rgba(236, 72, 153, 1)) drop-shadow(0 0 25px rgba(59, 130, 246, 0.9));
+                        transform: translateY(-6px) rotate(-3deg) scale(1.04);
                     }
                     60% { 
-                        filter: drop-shadow(0 0 45px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 35px rgba(168, 85, 247, 1)) drop-shadow(0 0 25px rgba(251, 191, 36, 1));
+                        transform: translateY(-15px) rotate(2deg) scale(1.1);
                     }
                     80% { 
-                        filter: drop-shadow(0 0 40px rgba(236, 72, 153, 1)) drop-shadow(0 0 30px rgba(59, 130, 246, 0.9));
+                        transform: translateY(-3px) rotate(-1deg) scale(1.02);
                     }
                 }
                 
-                @keyframes divine-float {
-                    0%, 100% { transform: translateY(0px) scale(1) rotate(0deg); }
-                    25% { transform: translateY(-15px) scale(1.12) rotate(3deg); }
-                    50% { transform: translateY(-8px) scale(1.06) rotate(0deg); }
-                    75% { transform: translateY(-12px) scale(1.09) rotate(-2deg); }
+                @keyframes legendary-presence {
+                    0%, 100% { 
+                        transform: scale(1) translateY(0px) rotate(0deg);
+                        filter: drop-shadow(0 0 40px rgba(255, 69, 0, 1)) drop-shadow(0 0 25px rgba(255, 140, 0, 0.8));
+                    }
+                    25% { 
+                        transform: scale(1.15) translateY(-20px) rotate(3deg);
+                        filter: drop-shadow(0 0 60px rgba(255, 69, 0, 1)) drop-shadow(0 0 40px rgba(255, 140, 0, 1)) drop-shadow(0 0 25px rgba(255, 215, 0, 0.8));
+                    }
+                    75% { 
+                        transform: scale(1.08) translateY(-10px) rotate(-2deg);
+                        filter: drop-shadow(0 0 50px rgba(255, 140, 0, 1)) drop-shadow(0 0 30px rgba(255, 165, 0, 0.9));
+                    }
+                }
+                
+                @keyframes divine-ascension {
+                    0%, 100% { 
+                        transform: translateY(0px) scale(1) rotate(0deg);
+                        filter: drop-shadow(0 0 50px rgba(255, 69, 0, 1));
+                    }
+                    50% { 
+                        transform: translateY(-25px) scale(1.2) rotate(5deg);
+                        filter: drop-shadow(0 0 80px rgba(255, 69, 0, 1)) drop-shadow(0 0 50px rgba(255, 215, 0, 1));
+                    }
+                }
+                
+                @keyframes reality-warp {
+                    0%, 100% { 
+                        transform: scale(1) skew(0deg, 0deg);
+                        filter: drop-shadow(0 0 45px rgba(255, 69, 0, 1));
+                    }
+                    25% { 
+                        transform: scale(1.1) skew(2deg, 1deg);
+                        filter: drop-shadow(0 0 70px rgba(255, 69, 0, 1)) drop-shadow(0 0 40px rgba(147, 51, 234, 0.8));
+                    }
+                    75% { 
+                        transform: scale(1.05) skew(-1deg, -2deg);
+                        filter: drop-shadow(0 0 60px rgba(255, 140, 0, 1)) drop-shadow(0 0 35px rgba(59, 130, 246, 0.7));
+                    }
+                }
+                
+                @keyframes dimensional-shift {
+                    0%, 100% { 
+                        transform: scale(1) perspective(500px) rotateY(0deg);
+                        filter: drop-shadow(0 0 50px rgba(255, 69, 0, 1));
+                    }
+                    50% { 
+                        transform: scale(1.15) perspective(500px) rotateY(15deg);
+                        filter: drop-shadow(0 0 80px rgba(255, 69, 0, 1)) drop-shadow(0 0 50px rgba(168, 85, 247, 0.9));
+                    }
+                }
+                
+                @keyframes prismatic-aura {
+                    0%, 100% { 
+                        transform: scale(1);
+                        filter: drop-shadow(0 0 60px rgba(255, 69, 0, 1)) hue-rotate(0deg);
+                    }
+                    25% { 
+                        transform: scale(1.12);
+                        filter: drop-shadow(0 0 80px rgba(255, 69, 0, 1)) hue-rotate(90deg);
+                    }
+                    50% { 
+                        transform: scale(1.08);
+                        filter: drop-shadow(0 0 70px rgba(255, 69, 0, 1)) hue-rotate(180deg);
+                    }
+                    75% { 
+                        transform: scale(1.1);
+                        filter: drop-shadow(0 0 75px rgba(255, 69, 0, 1)) hue-rotate(270deg);
+                    }
                 }
                 
                 @keyframes thought-bubble-appear {
@@ -828,71 +1087,79 @@ function Header({ username, isTimerActive }) {
                     100% { opacity: 1; transform: scale(1) translateY(0px); }
                 }
                 
-                @keyframes aura-particle {
-                    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.5; }
-                    50% { transform: scale(1.2) rotate(180deg); opacity: 0.9; }
+                @keyframes pet-effect-bounce {
+                    0%, 100% { transform: scale(1) translateY(0px); }
+                    50% { transform: scale(1.15) translateY(-8px); }
                 }
                 
-                @keyframes lightning-bolt {
-                    0% { opacity: 0; transform: scale(0.5); }
-                    10% { opacity: 1; transform: scale(1.2); }
-                    20% { opacity: 0.8; transform: scale(0.9); }
-                    30% { opacity: 1; transform: scale(1.1); }
-                    100% { opacity: 0; transform: scale(0.8); }
+                @keyframes heart-float {
+                    0% { opacity: 1; transform: translateY(0px) scale(0.5); }
+                    100% { opacity: 0; transform: translateY(-40px) scale(1); }
                 }
                 
-                .animate-bounce-subtle {
-                    animation: bounce-subtle 2s ease-in-out;
+                @keyframes prismatic-beam {
+                    0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+                    50% { opacity: 1; transform: scale(1) rotate(180deg); }
+                    100% { opacity: 0; transform: scale(0.8) rotate(360deg); }
                 }
                 
-                .animate-sway {
-                    animation: sway 3s ease-in-out;
+                @keyframes dimensional-rift {
+                    0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+                    50% { opacity: 0.8; transform: scale(1) rotate(90deg); }
+                    100% { opacity: 0; transform: scale(0.5) rotate(180deg); }
                 }
                 
-                .animate-electric-pulse {
-                    animation: electric-pulse 2.5s ease-in-out;
-                }
+                /* Animation Classes */
+                .animate-gentle-bounce { animation: gentle-bounce 2s ease-in-out; }
+                .animate-subtle-sway { animation: subtle-sway 3s ease-in-out; }
+                .animate-curious-tilt { animation: curious-tilt 2.5s ease-in-out; }
+                .animate-energy-pulse { animation: energy-pulse 2.5s ease-in-out; }
+                .animate-electric-bounce { animation: electric-bounce 3s ease-in-out; }
+                .animate-power-sway { animation: power-sway 3.5s ease-in-out; }
+                .animate-spark-dance { animation: spark-dance 4s ease-in-out; }
+                .animate-wisdom-float { animation: wisdom-float 4s ease-in-out; }
+                .animate-knowledge-glow { animation: knowledge-glow 3.5s ease-in-out; }
+                .animate-mystic-sway { animation: mystic-sway 4s ease-in-out; }
+                .animate-scholar-meditation { animation: scholar-meditation 5s ease-in-out; }
+                .animate-celestial-float { animation: celestial-float 5s ease-in-out; }
+                .animate-cosmic-pulse { animation: cosmic-pulse 4s ease-in-out; }
+                .animate-ancient-wisdom { animation: ancient-wisdom 6s ease-in-out; }
+                .animate-stellar-dance { animation: stellar-dance 5s ease-in-out; }
+                .animate-legendary-presence { animation: legendary-presence 6s ease-in-out; }
+                .animate-divine-ascension { animation: divine-ascension 7s ease-in-out; }
+                .animate-reality-warp { animation: reality-warp 5s ease-in-out; }
+                .animate-dimensional-shift { animation: dimensional-shift 6s ease-in-out; }
+                .animate-prismatic-aura { animation: prismatic-aura 8s ease-in-out; }
                 
-                .animate-wisdom-glow {
-                    animation: wisdom-glow 3s ease-in-out;
-                }
+                .thought-bubble-enter { animation: thought-bubble-appear 0.6s ease-out; }
+                .pet-effect-active { animation: pet-effect-bounce 0.8s ease-in-out; }
+                .heart-particle { animation: heart-float 2s ease-out forwards; }
+                .prismatic-beam-effect { animation: prismatic-beam 3s ease-out; }
+                .dimensional-rift-effect { animation: dimensional-rift 2s ease-out; }
                 
-                .animate-float-gentle {
-                    animation: float-gentle 4s ease-in-out;
-                }
-                
-                .animate-mystical-aura {
-                    animation: mystical-aura 4s ease-in-out;
-                }
-                
-                .animate-cosmic-pulse {
-                    animation: cosmic-pulse 3s ease-in-out;
-                }
-                
-                .animate-royal-presence {
-                    animation: royal-presence 5s ease-in-out;
-                }
-                
-                .animate-lightning-aura {
-                    animation: lightning-aura 3s ease-in-out;
-                }
-                
-                .animate-divine-float {
-                    animation: divine-float 6s ease-in-out;
-                }
-                
-                .thought-bubble-enter {
-                    animation: thought-bubble-appear 0.5s ease-out;
-                }
-                
-                .aura-particle {
-                    animation: aura-particle 3s ease-in-out infinite;
-                }
-                
-                .lightning-bolt {
-                    animation: lightning-bolt 0.2s ease-out;
+                /* Background glow overlay */
+                .background-glow-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    pointer-events: none;
+                    z-index: 25;
+                    opacity: 0.6;
+                    transition: opacity 0.5s ease-in-out;
                 }
             `}</style>
+
+            {/* Background glow overlay for high-tier pets */}
+            {backgroundGlow && (
+                <div 
+                    className="background-glow-overlay"
+                    style={{
+                        background: getPetEffects(getCurrentPetType()).backgroundGlow
+                    }}
+                />
+            )}
 
             <nav className="w-full h-16 md:h-20 border-b border-zinc-800 flex items-center justify-between px-4 md:px-8 bg-zinc-950/30 backdrop-blur-sm relative">
                 <div className="flex items-center gap-4">
@@ -928,39 +1195,87 @@ function Header({ username, isTimerActive }) {
                         </div>
                     )}
                 </div>
-                {isMobile && (
-                    hasHatchedPet ? (
-                        <button
-                            onClick={handlePetIconClick}
-                            className="relative w-10 h-10 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg"
-                        >
-                            <img 
-                                src={getCurrentBirdAssets().idle} 
-                                alt="Pet"
-                                className="w-8 h-8 object-contain"
-                                style={{ imageRendering: 'crisp-edges' }}
-                            />
-                            {unlockedPets.length > 1 && (
-                                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
-                                    {unlockedPets.length}
-                                </span>
-                            )}
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleSilverEgg}
-                            className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
-                        >
-                        </button>
-                    )
-                )}
-                
-                {!isMobile && (
-                    <div className="flex flex-row gap-4 items-center">
+
+                {/* Enhanced interaction mode toggle for mobile */}
+                {isMobile && birdVisible && (
+                    <div className="flex items-center gap-2">
+                        <div className="flex bg-zinc-800 rounded-lg p-1">
+                            <button
+                                onClick={() => setInteractionMode('pet')}
+                                className={`p-1.5 rounded ${interactionMode === 'pet' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}
+                            >
+                                <Hand className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => setInteractionMode('fly')}
+                                className={`p-1.5 rounded ${interactionMode === 'fly' ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
+                            >
+                                <Plane className="w-4 h-4" />
+                            </button>
+                        </div>
                         {hasHatchedPet ? (
                             <button
                                 onClick={handlePetIconClick}
                                 className="relative w-10 h-10 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg"
+                            >
+                                <img 
+                                    src={getCurrentBirdAssets().idle} 
+                                    alt="Pet"
+                                    className="w-8 h-8 object-contain"
+                                    style={{ imageRendering: 'crisp-edges' }}
+                                />
+                                {unlockedPets.length > 1 && (
+                                    <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
+                                        {unlockedPets.length}
+                                    </span>
+                                )}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleSilverEgg}
+                                className="flex gap-2 w-6 h-7 bg-gradient-to-b from-gray-200 via-gray-100 to-gray-300 rounded-silver-egg border border-gray-400 shadow-inner animate-silver-glow hover:scale-110 transition-transform duration-200"
+                            >
+                            </button>
+                        )}
+                    </div>
+                )}
+                
+                {!isMobile && (
+                    <div className="flex flex-row gap-4 items-center">
+                        {/* Enhanced interaction mode toggle for desktop */}
+                        {birdVisible && (
+                            <div className="flex items-center gap-2 bg-zinc-800 rounded-lg p-1 mr-2">
+                                <button
+                                    onClick={() => setInteractionMode('pet')}
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                                        interactionMode === 'pet' 
+                                            ? 'bg-purple-600 text-white shadow-lg' 
+                                            : 'text-gray-400 hover:text-white'
+                                    }`}
+                                    title="Pet Mode - Click bird to pet"
+                                >
+                                    <Hand className="w-4 h-4" />
+                                    Pet
+                                </button>
+                                <button
+                                    onClick={() => setInteractionMode('fly')}
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                                        interactionMode === 'fly' 
+                                            ? 'bg-blue-600 text-white shadow-lg' 
+                                            : 'text-gray-400 hover:text-white'
+                                    }`}
+                                    title="Fly Mode - Click bird then click destination"
+                                >
+                                    <Plane className="w-4 h-4" />
+                                    Fly
+                                </button>
+                            </div>
+                        )}
+
+                        {hasHatchedPet ? (
+                            <button
+                                onClick={handlePetIconClick}
+                                className="relative w-10 h-10 rounded-full bg-black border-gray-400 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg"
                             >
                                 <img 
                                     src={getCurrentBirdAssets().idle} 
@@ -1018,6 +1333,9 @@ function Header({ username, isTimerActive }) {
                     {showTrail && (activePet !== 'master' && userRank !== 'master') && trailPositions.map((pos, index) => {
                         const currentPet = getCurrentPetType();
                         const effects = getPetEffects(currentPet);
+                        const opacity = (index / trailPositions.length) * 0.9;
+                        const size = currentPet === 'sage' ? 8 : currentPet === 'scholar' ? 6 : 5;
+                        
                         return (
                             <div
                                 key={index}
@@ -1025,25 +1343,32 @@ function Header({ username, isTimerActive }) {
                                 style={{
                                     left: `${pos.x + 96}px`,
                                     top: `${pos.y + 96}px`,
-                                    opacity: (index / trailPositions.length) * 0.8,
+                                    opacity: opacity,
                                     transform: 'translate(-50%, -50%)',
                                 }}
                             >
                                 <div 
                                     className="rounded-full animate-pulse"
                                     style={{
-                                        width: currentPet === 'sage' ? '6px' : currentPet === 'scholar' ? '5px' : '4px',
-                                        height: currentPet === 'sage' ? '6px' : currentPet === 'scholar' ? '5px' : '4px',
-                                        backgroundColor: effects.trailColor,
-                                        boxShadow: `0 0 15px ${effects.glowColor}`,
-                                        animation: `pulse 0.5s ease-in-out infinite`,
+                                        width: `${size}px`,
+                                        height: `${size}px`,
+                                        background: `radial-gradient(circle, ${effects.trailColor}, transparent)`,
+                                        boxShadow: `0 0 ${size * 3}px ${effects.glowColor}`,
                                     }}
                                 />
+                                {currentPet === 'sage' && (
+                                    <div 
+                                        className="absolute inset-0 rounded-full animate-ping"
+                                        style={{
+                                            background: `radial-gradient(circle, ${effects.auraColor}, transparent)`,
+                                        }}
+                                    />
+                                )}
                             </div>
                         );
                     })}
                     
-                    {/* Aura Particles for Scholar, Sage, Master */}
+                    {/* Enhanced Aura Particles */}
                     {auraParticles.map((particle) => {
                         const currentPet = getCurrentPetType();
                         const effects = getPetEffects(currentPet);
@@ -1054,12 +1379,14 @@ function Header({ username, isTimerActive }) {
                         return (
                             <div
                                 key={particle.id}
-                                className="fixed z-35 pointer-events-none aura-particle"
+                                className="fixed z-35 pointer-events-none"
                                 style={{
                                     left: `${x}px`,
                                     top: `${y}px`,
                                     opacity: particle.opacity,
                                     transform: 'translate(-50%, -50%)',
+                                    animation: `aura-particle-${currentPet} 3s ease-in-out infinite`,
+                                    animationDelay: `${particle.id * 0.2}s`
                                 }}
                             >
                                 <div
@@ -1067,55 +1394,171 @@ function Header({ username, isTimerActive }) {
                                     style={{
                                         width: `${particle.size}px`,
                                         height: `${particle.size}px`,
-                                        backgroundColor: effects.auraColor,
+                                        background: `radial-gradient(circle, ${effects.auraColor}, ${effects.glowColor}20)`,
                                         boxShadow: `0 0 ${particle.size * 2}px ${effects.glowColor}`,
+                                    }}
+                                />
+                                {currentPet === 'master' && (
+                                    <div 
+                                        className="absolute inset-0 rounded-full animate-ping"
+                                        style={{
+                                            background: `conic-gradient(from 0deg, ${effects.glowColor}, transparent, ${effects.glowColor})`,
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
+                    
+                    {/* Orbital Elements for Scholar+ */}
+                    {orbitalElements.map((element) => {
+                        const currentPet = getCurrentPetType();
+                        const effects = getPetEffects(currentPet);
+                        const radian = (element.angle * Math.PI) / 180;
+                        const x = birdPosition.x + 80 + Math.cos(radian) * element.radius;
+                        const y = birdPosition.y + 80 + Math.sin(radian) * element.radius;
+                        
+                        return (
+                            <div
+                                key={element.id}
+                                className="fixed z-34 pointer-events-none"
+                                style={{
+                                    left: `${x}px`,
+                                    top: `${y}px`,
+                                    opacity: element.opacity,
+                                    transform: 'translate(-50%, -50%)',
+                                }}
+                            >
+                                <div
+                                    className="rounded-full animate-pulse"
+                                    style={{
+                                        width: `${element.size}px`,
+                                        height: `${element.size}px`,
+                                        background: `linear-gradient(45deg, ${effects.glowColor}, ${effects.auraColor})`,
+                                        boxShadow: `0 0 ${element.size * 4}px ${effects.glowColor}`,
                                     }}
                                 />
                             </div>
                         );
                     })}
                     
-                    {/* Master Lightning Effects */}
-                    {getCurrentPetType() === 'master' && masterLightning.map((bolt) => (
-                        <svg
-                            key={bolt.id}
-                            className="fixed z-36 pointer-events-none lightning-bolt"
+                    {/* Magic Circles for Sage+ */}
+                    {magicCircles.map((circle) => {
+                        const currentPet = getCurrentPetType();
+                        const effects = getPetEffects(currentPet);
+                        
+                        return (
+                            <svg
+                                key={circle.id}
+                                className="fixed z-33 pointer-events-none"
+                                style={{
+                                    left: `${birdPosition.x + 80}px`,
+                                    top: `${birdPosition.y + 80}px`,
+                                    width: `${circle.radius * 2}px`,
+                                    height: `${circle.radius * 2}px`,
+                                    opacity: circle.opacity,
+                                    transform: `translate(-50%, -50%) rotate(${circle.rotation}deg)`,
+                                }}
+                            >
+                                <circle
+                                    cx={circle.radius}
+                                    cy={circle.radius}
+                                    r={circle.radius - circle.strokeWidth}
+                                    fill="none"
+                                    stroke={effects.glowColor}
+                                    strokeWidth={circle.strokeWidth}
+                                    strokeDasharray="10 5"
+                                    filter={`drop-shadow(0 0 10px ${effects.glowColor})`}
+                                />
+                                {currentPet === 'master' && (
+                                    <>
+                                        <circle
+                                            cx={circle.radius}
+                                            cy={circle.radius}
+                                            r={circle.radius - circle.strokeWidth - 10}
+                                            fill="none"
+                                            stroke={effects.auraColor}
+                                            strokeWidth="1"
+                                            strokeDasharray="5 3"
+                                        />
+                                        {/* Runic symbols */}
+                                        {[0, 60, 120, 180, 240, 300].map((angle, i) => {
+                                            const symbolRadian = (angle * Math.PI) / 180;
+                                            const symbolX = circle.radius + Math.cos(symbolRadian) * (circle.radius - 15);
+                                            const symbolY = circle.radius + Math.sin(symbolRadian) * (circle.radius - 15);
+                                            return (
+                                                <text
+                                                    key={i}
+                                                    x={symbolX}
+                                                    y={symbolY}
+                                                    fill={effects.glowColor}
+                                                    fontSize="12"
+                                                    textAnchor="middle"
+                                                    dominantBaseline="middle"
+                                                    style={{ filter: `drop-shadow(0 0 5px ${effects.glowColor})` }}
+                                                >
+                                                    ✦
+                                                </text>
+                                            );
+                                        })}
+                                    </>
+                                )}
+                            </svg>
+                        );
+                    })}
+                    
+                    {/* Prismatic Beams for Master */}
+                    {getCurrentPetType() === 'master' && prismaticBeams.map((beam) => (
+                        <div
+                            key={beam.id}
+                            className="fixed z-36 pointer-events-none prismatic-beam-effect"
                             style={{
-                                left: `${birdPosition.x + 80 + bolt.startX}px`,
-                                top: `${birdPosition.y + 80 + bolt.startY}px`,
-                                width: '200px',
-                                height: '200px',
-                                opacity: bolt.opacity,
-                                transform: 'translate(-50%, -50%)',
+                                left: `${birdPosition.x + 80}px`,
+                                top: `${birdPosition.y + 80}px`,
+                                width: `${beam.length}px`,
+                                height: `${beam.width}px`,
+                                background: `linear-gradient(90deg, ${beam.color}, transparent)`,
+                                transform: `translate(-50%, -50%) rotate(${beam.angle}deg)`,
+                                opacity: beam.opacity,
+                                boxShadow: `0 0 20px ${beam.color}`,
+                                borderRadius: '50px',
                             }}
-                        >
-                            <path
-                                d={`M ${100 + bolt.startX} ${100 + bolt.startY} L ${100 + bolt.endX} ${100 + bolt.endY}`}
-                                stroke="rgba(255, 255, 255, 0.9)"
-                                strokeWidth="3"
-                                fill="none"
-                                filter="drop-shadow(0 0 10px rgba(255, 255, 255, 1))"
-                            />
-                            <path
-                                d={`M ${100 + bolt.startX} ${100 + bolt.startY} L ${100 + bolt.endX} ${100 + bolt.endY}`}
-                                stroke="rgba(236, 72, 153, 0.8)"
-                                strokeWidth="1"
-                                fill="none"
-                            />
-                        </svg>
+                        />
                     ))}
                     
+                    {/* Dimensional Rifts for Master */}
+                    {getCurrentPetType() === 'master' && dimensionalRifts.map((rift) => (
+                        <div
+                            key={rift.id}
+                            className="fixed z-37 pointer-events-none dimensional-rift-effect"
+                            style={{
+                                left: `${birdPosition.x + 80 + rift.x}px`,
+                                top: `${birdPosition.y + 80 + rift.y}px`,
+                                width: `${rift.width}px`,
+                                height: `${rift.height}px`,
+                                background: 'linear-gradient(90deg, rgba(255,69,0,0.9), rgba(147,51,234,0.7), rgba(59,130,246,0.5))',
+                                transform: `translate(-50%, -50%) rotate(${rift.rotation}deg)`,
+                                opacity: rift.opacity,
+                                borderRadius: '2px',
+                                boxShadow: '0 0 30px rgba(255,69,0,0.8)',
+                            }}
+                        />
+                    ))}
+                    
+                    {/* Main Bird with Enhanced Effects */}
                     <div
                         ref={birdRef}
                         onClick={handleBirdClick}
-                        className={`fixed z-40 cursor-pointer transition-all duration-200 ${
-                            !isMoving ? 'hover:scale-120' : 'scale-120'
-                        } ${isMoving && (activePet !== 'master' && userRank !== 'master') ? 'animate-bounce' : getIdleAnimationClass()}`}
+                        className={`fixed z-40 cursor-pointer transition-all duration-300 ${
+                            !isMoving && !petEffect ? 'hover:scale-110' : ''
+                        } ${isMoving && (activePet !== 'master' && userRank !== 'master') ? 'animate-bounce' : getIdleAnimationClass()} ${
+                            petEffect ? 'pet-effect-active' : ''
+                        }`}
                         style={{
                             left: `${birdPosition.x}px`,
                             top: `${birdPosition.y}px`,
                             transform: (activePet !== 'master' && userRank !== 'master') ? `rotate(${birdRotation}deg)` : 'rotate(0deg)',
-                            transition: isMoving ? 'none' : 'transform 0.3s ease-out',
+                            transition: isMoving ? 'none' : 'transform 0.4s ease-out, filter 0.3s ease-out',
                             isolation: 'isolate',
                         }}
                     >
@@ -1135,21 +1578,20 @@ function Header({ username, isTimerActive }) {
                         />
                         
                         {/* Enhanced Thought Bubble */}
-                        {showThoughtBubble && !birdSelected && !isMoving && (
-                            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 thought-bubble-enter">
+                        {showThoughtBubble && !birdSelected && !isMoving && !petEffect && (
+                            <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 thought-bubble-enter">
                                 <div 
-                                    className="relative rounded-full p-3 shadow-lg border-2"
+                                    className="relative rounded-2xl p-4 shadow-2xl border-2 backdrop-blur-sm"
                                     style={{
-                                        background: `linear-gradient(135deg, ${getPetEffects(getCurrentPetType()).auraColor}, rgba(255, 255, 255, 0.9))`,
+                                        background: `linear-gradient(135deg, ${getPetEffects(getCurrentPetType()).auraColor}80, rgba(255, 255, 255, 0.95))`,
                                         borderColor: getPetEffects(getCurrentPetType()).glowColor,
-                                        boxShadow: `0 0 20px ${getPetEffects(getCurrentPetType()).glowColor}`
+                                        boxShadow: `0 0 30px ${getPetEffects(getCurrentPetType()).glowColor}, inset 0 0 20px rgba(255,255,255,0.3)`
                                     }}
                                 >
-                                    <span className="text-2xl">{currentThought}</span>
-                                    {/* Enhanced thought bubble tail */}
-                                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                                    <span className="text-3xl drop-shadow-lg">{currentThought}</span>
+                                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
                                         <div 
-                                            className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent"
+                                            className="w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent"
                                             style={{ borderTopColor: getPetEffects(getCurrentPetType()).glowColor }}
                                         ></div>
                                     </div>
@@ -1157,40 +1599,84 @@ function Header({ username, isTimerActive }) {
                             </div>
                         )}
                         
-                        {/* Enhanced Selection Messages */}
-                        {birdSelected && !isMoving && (activePet !== 'master') && (
-                            <div 
-                                className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-white text-xs px-2 py-1 rounded whitespace-nowrap"
-                                style={{
-                                    background: `linear-gradient(135deg, ${getPetEffects(getCurrentPetType()).glowColor}, ${getPetEffects(getCurrentPetType()).auraColor})`,
-                                    boxShadow: `0 0 10px ${getPetEffects(getCurrentPetType()).glowColor}`
-                                }}
-                            >
-                                {getCurrentPetType() === 'sage' ? 'Wisdom guides my flight!' : 
-                                 getCurrentPetType() === 'scholar' ? 'Knowledge awaits!' :
-                                 getCurrentPetType() === 'apprentice' ? 'Ready to soar!' : 'Time to fly!'}
+                        {/* Enhanced Pet Effect Message */}
+                        {petEffect && (
+                            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2">
+                                <div 
+                                    className="relative rounded-full px-6 py-3 shadow-2xl border-2 backdrop-blur-sm animate-bounce"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${getPetEffects(getCurrentPetType()).glowColor}, ${getPetEffects(getCurrentPetType()).auraColor})`,
+                                        borderColor: '#ffffff',
+                                        boxShadow: `0 0 40px ${getPetEffects(getCurrentPetType()).glowColor}, inset 0 0 20px rgba(255,255,255,0.3)`,
+                                        textShadow: '0 0 10px rgba(0,0,0,0.5)'
+                                    }}
+                                >
+                                    <span className="text-white font-bold text-lg">{petEffect.message}</span>
+                                    {/* Heart particles for petting */}
+                                    {[...Array(getCurrentPetType() === 'master' ? 8 : getCurrentPetType() === 'sage' ? 6 : 4)].map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className="absolute heart-particle"
+                                            style={{
+                                                left: `${Math.random() * 100}%`,
+                                                top: '100%',
+                                                animationDelay: `${i * 0.2}s`,
+                                                fontSize: getCurrentPetType() === 'master' ? '20px' : '16px'
+                                            }}
+                                        >
+                                            {getCurrentPetType() === 'master' ? '💎' : getCurrentPetType() === 'sage' ? '✨' : '💝'}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         
-                        {birdSelected && (activePet === 'master') && (
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-rose-400 via-purple-400 to-blue-400 text-white text-xs px-2 py-1 rounded whitespace-nowrap animate-pulse">
-                                ✨ LEGENDARY MASTER ✨
+                        {/* Enhanced Selection Messages */}
+                        {birdSelected && !isMoving && !petEffect && (
+                            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+                                <div 
+                                    className="relative rounded-full px-4 py-2 shadow-lg border backdrop-blur-sm"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${getPetEffects(getCurrentPetType()).glowColor}E0, ${getPetEffects(getCurrentPetType()).auraColor}C0)`,
+                                        borderColor: '#ffffff80',
+                                        boxShadow: `0 0 20px ${getPetEffects(getCurrentPetType()).glowColor}`
+                                    }}
+                                >
+                                    <span className="text-white font-semibold text-sm">
+                                        {interactionMode === 'pet' ? (
+                                            getCurrentPetType() === 'master' ? '👑 READY FOR LEGENDARY PETS! 👑' :
+                                            getCurrentPetType() === 'sage' ? '🌟 Ready for mystical pets! 🌟' :
+                                            getCurrentPetType() === 'scholar' ? '📚 Ready for wise pets! 📚' :
+                                            getCurrentPetType() === 'apprentice' ? '⚡ Ready for magical pets! ⚡' :
+                                            '💚 Ready for gentle pets! 💚'
+                                        ) : (
+                                            getCurrentPetType() === 'master' ? '👑 LEGENDARY MASTER (No flight needed!) 👑' :
+                                            getCurrentPetType() === 'sage' ? '🌟 Click to command flight! 🌟' :
+                                            getCurrentPetType() === 'scholar' ? '📚 Click where to fly! 📚' :
+                                            getCurrentPetType() === 'apprentice' ? '⚡ Ready to soar! ⚡' :
+                                            '💚 Click where to fly! 💚'
+                                        )}
+                                    </span>
+                                </div>
                             </div>
                         )}
                         
                         {/* Enhanced Movement Messages */}
                         {isMoving && (activePet !== 'master') && (
-                            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 flex items-center gap-1">
+                            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 flex items-center gap-1">
                                 <div 
-                                    className="text-white text-xs px-2 py-1 rounded-full animate-pulse"
+                                    className="text-white text-sm px-4 py-2 rounded-full animate-pulse backdrop-blur-sm border"
                                     style={{
                                         background: `linear-gradient(135deg, ${getPetEffects(getCurrentPetType()).glowColor}, ${getPetEffects(getCurrentPetType()).auraColor})`,
-                                        boxShadow: `0 0 15px ${getPetEffects(getCurrentPetType()).glowColor}`
+                                        borderColor: '#ffffff60',
+                                        boxShadow: `0 0 25px ${getPetEffects(getCurrentPetType()).glowColor}`,
+                                        textShadow: '0 0 10px rgba(0,0,0,0.8)'
                                     }}
                                 >
-                                    {getCurrentPetType() === 'sage' ? '🌟 MYSTIC FLIGHT! 🌟' : 
-                                     getCurrentPetType() === 'scholar' ? '📚 SWIFT STUDY! 📚' :
-                                     getCurrentPetType() === 'apprentice' ? '⚡ ZOOM! ⚡' : 'WOOOO!'}
+                                    {getCurrentPetType() === 'sage' ? '🌟 COSMIC FLIGHT! 🌟' : 
+                                     getCurrentPetType() === 'scholar' ? '📚 SCHOLARLY SOAR! 📚' :
+                                     getCurrentPetType() === 'apprentice' ? '⚡ MAGICAL ZOOM! ⚡' : 
+                                     '💚 FLYING! 💚'}
                                 </div>
                             </div>
                         )}
@@ -1198,6 +1684,7 @@ function Header({ username, isTimerActive }) {
                 </>
             )}
 
+            {/* Mobile Menu */}
             {isMobile && mobileMenuOpen && (
                 <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-sm">
                     <div className="fixed inset-y-0 right-0 w-4/5 max-w-sm bg-zinc-900 border-l border-zinc-800 flex flex-col">
