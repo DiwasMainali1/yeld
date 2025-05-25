@@ -9,7 +9,6 @@ import pandaImage from '../assets/panda.png';
 import penguinImage from '../assets/penguin.png';
 import koalaImage from '../assets/koala.png';
 
-// Import all bird assets
 import sageGif from './pet-components/pet-assets/sage.gif';
 import sageIdlePng from './pet-components/pet-assets/sage-idle.png';
 import noviceGif from './pet-components/pet-assets/novice.gif';
@@ -20,6 +19,7 @@ import scholarGif from './pet-components/pet-assets/scholar.gif';
 import scholarIdlePng from './pet-components/pet-assets/scholar-idle.png';
 import masterGif from './pet-components/pet-assets/master.gif';
 import masterIdlePng from './pet-components/pet-assets/master-idle.png';
+import palmImage from './pet-components/pet-assets/palm.png';
 
 import PetModal from './pet-components/PetModal';
 import PetSelectionModal from './pet-components/PetSelectionModal';
@@ -106,7 +106,7 @@ function Header({ username, isTimerActive }) {
     const [activePet, setActivePet] = useState(null);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
     
-    // Enhanced bird state
+    // Enhanced bird state - SIMPLIFIED
     const [birdVisible, setBirdVisible] = useState(false);
     const [birdPosition, setBirdPosition] = useState({ x: 200, y: 200 });
     const [birdSelected, setBirdSelected] = useState(false);
@@ -115,7 +115,9 @@ function Header({ username, isTimerActive }) {
     const [birdRotation, setBirdRotation] = useState(0);
     const [showTrail, setShowTrail] = useState(false);
     const [trailPositions, setTrailPositions] = useState([]);
-    const [interactionMode, setInteractionMode] = useState('pet'); // 'pet' or 'fly'
+    
+    // SIMPLIFIED: Single flight mode state
+    const [isInFlightMode, setIsInFlightMode] = useState(false);
     
     // Enhanced animation states
     const [showThoughtBubble, setShowThoughtBubble] = useState(false);
@@ -129,16 +131,27 @@ function Header({ username, isTimerActive }) {
     const [legendaryEffect, setLegendaryEffect] = useState(null);
     const [currentAbility, setCurrentAbility] = useState(null);
     
+    // NEW: Hand petting animation state
+    const [showPettingHand, setShowPettingHand] = useState(false);
+    const [pettingHandPosition, setPettingHandPosition] = useState({ x: 0, y: 0 });
+    const [handRotation, setHandRotation] = useState(0);
+    
     const birdRef = useRef(null);
     const animationRef = useRef(null);
     const idleTimerRef = useRef(null);
     const thoughtTimerRef = useRef(null);
     const auraTimerRef = useRef(null);
     const controlsTimerRef = useRef(null);
+    const pettingTimerRef = useRef(null);
 
     const MOVEMENT_SPEED = 200;
 
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    // Check if bird is in any animation state (prevents pet switching)
+    const isInAnimationState = () => {
+        return isMoving || petEffect || legendaryEffect || idleAnimation !== '';
+    };
 
     // Get user rank based on total hours studied
     const getUserRank = (totalHours) => {
@@ -462,7 +475,7 @@ function Header({ username, isTimerActive }) {
 
     // Enhanced idle animations
     useEffect(() => {
-        if (birdVisible && !isMoving && !birdSelected && !petEffect && !legendaryEffect) {
+        if (birdVisible && !isMoving && !birdSelected && !petEffect && !legendaryEffect && !isInFlightMode) {
             const currentPet = getCurrentPetType();
             
             const startIdleAnimations = () => {
@@ -514,7 +527,6 @@ function Header({ username, isTimerActive }) {
                 }, randomDelay);
             };
 
-            // Enhanced thought bubbles
             const startThoughtBubbles = () => {
                 const randomDelay = Math.random() * 15000 + 12000;
                 
@@ -563,7 +575,7 @@ function Header({ username, isTimerActive }) {
             if (thoughtTimerRef.current) clearTimeout(thoughtTimerRef.current);
             if (auraTimerRef.current) clearInterval(auraTimerRef.current);
         };
-    }, [birdVisible, isMoving, birdSelected, petEffect, legendaryEffect, activePet, userRank]);
+    }, [birdVisible, isMoving, birdSelected, petEffect, legendaryEffect, activePet, userRank, isInFlightMode]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -613,12 +625,14 @@ function Header({ username, isTimerActive }) {
             if (rawProgress < 1) {
                 animationRef.current = requestAnimationFrame(animate);
             } else {
+                // Movement completed - reset to idle state
                 setIsMoving(false);
                 setBirdTarget(null);
                 setBirdSelected(false);
                 setBirdRotation(0);
                 setShowTrail(false);
                 setTrailPositions([]);
+                setIsInFlightMode(false); // Exit flight mode
             }
         };
 
@@ -633,17 +647,18 @@ function Header({ username, isTimerActive }) {
         };
     }, [birdTarget, isMoving, birdPosition, MOVEMENT_SPEED, userRank, activePet]);
 
-    // Enhanced page click handling
+    // SIMPLIFIED page click handler
     useEffect(() => {
         const handlePageClick = (e) => {
-            if (birdRef.current && birdRef.current.contains(e.target)) return;
-            
-            if (showBirdControls) {
-                setShowBirdControls(false);
+            // Don't handle clicks on the bird itself
+            if (birdRef.current && birdRef.current.contains(e.target)) {
+                return;
             }
             
             const currentPetRank = activePet || userRank;
-            if (birdSelected && interactionMode === 'fly') {
+            
+            // Handle flight mode clicks
+            if (isInFlightMode && birdSelected && !isMoving) {
                 if (currentPetRank === 'master') {
                     // Master pets teleport instantly
                     const rect = document.body.getBoundingClientRect();
@@ -651,21 +666,34 @@ function Header({ username, isTimerActive }) {
                     const y = e.clientY - rect.top - 80;
                     setBirdPosition({ x, y });
                     triggerLegendaryAbility({ name: "Cosmic Flight", icon: "🚀" });
+                    // Reset to idle after teleport
                     setBirdSelected(false);
+                    setIsInFlightMode(false);
                     return;
                 }
                 
-                if (isMoving) return;
-                
+                // Calculate destination and start movement
                 const rect = document.body.getBoundingClientRect();
                 const x = e.clientX - rect.left - 80;
                 const y = e.clientY - rect.top - 80;
                 
                 setBirdTarget({ x, y });
                 setIsMoving(true);
+                return;
             }
             
-            setBirdSelected(false);
+            // Default: hide controls and deselect bird
+            if (showBirdControls || birdSelected) {
+                setShowBirdControls(false);
+                setBirdSelected(false);
+                setIsInFlightMode(false);
+                
+                // Clear any control timer
+                if (controlsTimerRef.current) {
+                    clearTimeout(controlsTimerRef.current);
+                    controlsTimerRef.current = null;
+                }
+            }
         };
 
         if (birdVisible) {
@@ -673,9 +701,11 @@ function Header({ username, isTimerActive }) {
         }
 
         return () => {
-            document.removeEventListener('click', handlePageClick);
+            if (birdVisible) {
+                document.removeEventListener('click', handlePageClick);
+            }
         };
-    }, [birdSelected, birdVisible, isMoving, userRank, activePet, interactionMode, showBirdControls]);
+    }, [birdSelected, birdVisible, isMoving, userRank, activePet, isInFlightMode, showBirdControls]);
 
     const handleEggClick = async () => {
         setHasHatchedPet(true);
@@ -695,24 +725,46 @@ function Header({ username, isTimerActive }) {
 
     const handleBirdClick = (e) => {
         e.stopPropagation();
-        if (!isMoving && !petEffect && !legendaryEffect) {
-            setShowBirdControls(true);
-            setBirdSelected(true);
-            
-            // Auto-hide controls after 5 seconds
-            if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
-            controlsTimerRef.current = setTimeout(() => {
-                setShowBirdControls(false);
-                setBirdSelected(false);
-            }, 5000);
+        
+        // Don't show controls if in animation state or flight mode
+        if (isInAnimationState() || isInFlightMode) {
+            return;
         }
+        
+        // Clear any existing timer
+        if (controlsTimerRef.current) {
+            clearTimeout(controlsTimerRef.current);
+            controlsTimerRef.current = null;
+        }
+        
+        // Show controls
+        setShowBirdControls(true);
+        setBirdSelected(true);
+        
+        // Auto-hide after 5 seconds
+        controlsTimerRef.current = setTimeout(() => {
+            setShowBirdControls(false);
+            setBirdSelected(false);
+            controlsTimerRef.current = null;
+        }, 5000);
     };
 
-    // Enhanced pet interaction
     const handlePetInteraction = () => {
         const currentPet = getCurrentPetType();
         const messages = petMessages[currentPet] || petMessages.novice;
         const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        if (controlsTimerRef.current) {
+            clearTimeout(controlsTimerRef.current);
+            controlsTimerRef.current = null;
+        }
+        
+        setShowBirdControls(false);
+        setBirdSelected(false);
+        setIsInFlightMode(false);
+        
+        // Start the petting hand animation
+        startPettingAnimation();
         
         setPetEffect({
             message: randomMessage,
@@ -720,56 +772,105 @@ function Header({ username, isTimerActive }) {
             timestamp: Date.now()
         });
         
-        // Enhanced effects based on pet level
         switch(currentPet) {
-            case 'novice':
-                // Simple heart particles
-                break;
             case 'apprentice':
-                // Electric sparkles
-                setBackgroundGlow(true);
-                break;
             case 'scholar':
-                // Wisdom aura expansion
-                setBackgroundGlow(true);
-                break;
             case 'sage':
-                // Mystical energy waves
-                setBackgroundGlow(true);
-                break;
             case 'master':
-                // Legendary pet effects
                 setBackgroundGlow(true);
                 break;
         }
+
+        const duration = currentPet === 'master' ? 4000 : currentPet === 'sage' ? 3500 : 3000;
         
-        // Clear effect after duration
         setTimeout(() => {
             setPetEffect(null);
             setBackgroundGlow(false);
-        }, currentPet === 'master' ? 4000 : currentPet === 'sage' ? 3500 : 3000);
-        
-        setShowBirdControls(false);
-        setBirdSelected(false);
+        }, duration);
     };
 
+    const startPettingAnimation = () => {
+        const handX = birdPosition.x + 40; 
+        const handY = birdPosition.y; 
+        
+        setPettingHandPosition({ x: handX, y: handY });
+        setShowPettingHand(true);
+        
+        let animationStep = 0;
+        const pettingSteps = 8;
+        const stepDuration = 400; 
+        
+        const doPettingMotion = () => {
+            if (animationStep >= pettingSteps) {
+                setShowPettingHand(false);
+                setHandRotation(0);
+                if (pettingTimerRef.current) {
+                    clearInterval(pettingTimerRef.current);
+                    pettingTimerRef.current = null;
+                }
+                return;
+            }
+            
+            // Alternate between down and up motions
+            const isDownStroke = animationStep % 2 === 0;
+            const newY = handY + (isDownStroke ? 8 : -8); 
+            const newRotation = isDownStroke ? 10 : -5; 
+            
+            setPettingHandPosition({ x: handX, y: newY });
+            setHandRotation(newRotation);
+            
+            animationStep++;
+        };
+        
+        // Start the petting animation
+        pettingTimerRef.current = setInterval(doPettingMotion, stepDuration);
+        
+        // Clean up after total duration
+        setTimeout(() => {
+            setShowPettingHand(false);
+            setHandRotation(0);
+            if (pettingTimerRef.current) {
+                clearInterval(pettingTimerRef.current);
+                pettingTimerRef.current = null;
+            }
+        }, pettingSteps * stepDuration + 500);
+    };
+
+    // SIMPLIFIED flight mode handler
     const handleFlightMode = () => {
-        setInteractionMode('fly');
-        setBirdSelected(true);
+        // Clear timer and hide controls immediately
+        if (controlsTimerRef.current) {
+            clearTimeout(controlsTimerRef.current);
+            controlsTimerRef.current = null;
+        }
+        
+        // Set flight mode states
+        setIsInFlightMode(true);
         setShowBirdControls(false);
+        setBirdSelected(true); // Keep bird selected for visual feedback
     };
 
     const handlePetIconClick = () => {
-        if (unlockedPets.length > 1) {
+        // Always show the pet selection modal if pet is hatched
+        if (hasHatchedPet) {
+            // Don't allow pet switching during animations
+            if (isInAnimationState()) {
+                return;
+            }
             setShowPetSelectionModal(true);
         } else {
-            setBirdVisible(!birdVisible);
+            setShowPetModal(true);
         }
     };
 
     const handlePetSelection = (selectedPet) => {
-        setActivePet(selectedPet);
-        setBirdVisible(true);
+        if (selectedPet === 'none') {
+            setBirdVisible(false);
+            setActivePet(null);
+        } else {
+            setActivePet(selectedPet);
+            setBirdVisible(true);
+        }
         setShowPetSelectionModal(false);
     };
 
@@ -1027,6 +1128,33 @@ function Header({ username, isTimerActive }) {
                     100% { opacity: 1; transform: translateY(0px) scale(1); }
                 }
                 
+                /* NEW: Hand petting animation */
+                @keyframes gentle-pet {
+                    0%, 100% { 
+                        transform: translateY(0px) rotate(0deg) scale(1);
+                        opacity: 0.9;
+                    }
+                    50% { 
+                        transform: translateY(5px) rotate(8deg) scale(1.1);
+                        opacity: 1;
+                    }
+                }
+                
+                @keyframes sparkle-burst {
+                    0% { 
+                        opacity: 0;
+                        transform: scale(0) rotate(0deg);
+                    }
+                    50% { 
+                        opacity: 1;
+                        transform: scale(1.2) rotate(180deg);
+                    }
+                    100% { 
+                        opacity: 0;
+                        transform: scale(0.8) rotate(360deg);
+                    }
+                }
+                
                 /* Animation Classes */
                 .animate-gentle-bounce { animation: gentle-bounce 2s ease-in-out; }
                 .animate-subtle-sway { animation: subtle-sway 3s ease-in-out; }
@@ -1049,6 +1177,10 @@ function Header({ username, isTimerActive }) {
                 .heart-particle { animation: heart-float 1.8s ease-out forwards; }
                 .legendary-effect-active { animation: legendary-effect 3s ease-out; }
                 .control-panel-enter { animation: control-panel-appear 0.3s ease-out; }
+                
+                /* NEW: Hand animation classes */
+                .petting-hand { animation: gentle-pet 0.4s ease-in-out; }
+                .sparkle-effect { animation: sparkle-burst 0.8s ease-out forwards; }
                 
                 /* Background glow overlay */
                 .background-glow-overlay {
@@ -1110,24 +1242,29 @@ function Header({ username, isTimerActive }) {
                 </div>
 
                 {/* Pet controls for mobile */}
-                {isMobile && birdVisible && (
+                {isMobile && (
                     <div className="flex items-center gap-2">
                         {hasHatchedPet ? (
                             <button
                                 onClick={handlePetIconClick}
-                                className="relative w-10 h-10 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg"
+                                disabled={isInAnimationState()}
+                                className={`relative w-10 h-10 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg ${
+                                    isInAnimationState() ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                             >
-                                <img 
-                                    src={getCurrentBirdAssets().idle} 
-                                    alt="Pet"
-                                    className="w-8 h-8 object-contain"
-                                    style={{ imageRendering: 'crisp-edges' }}
-                                />
-                                {unlockedPets.length > 1 && (
-                                    <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
-                                        {unlockedPets.length}
-                                    </span>
+                                {activePet && birdVisible ? (
+                                    <img 
+                                        src={getCurrentBirdAssets().idle} 
+                                        alt="Pet"
+                                        className="w-8 h-8 object-contain"
+                                        style={{ imageRendering: 'crisp-edges' }}
+                                    />
+                                ) : (
+                                    <span className="text-xs text-gray-600">No Pet</span>
                                 )}
+                                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
+                                    {unlockedPets.length}
+                                </span>
                             </button>
                         ) : (
                             <button
@@ -1144,19 +1281,24 @@ function Header({ username, isTimerActive }) {
                         {hasHatchedPet ? (
                             <button
                                 onClick={handlePetIconClick}
-                                className="relative w-10 h-10 rounded-full bg-black border-gray-400 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg"
+                                disabled={isInAnimationState()}
+                                className={`relative w-10 h-10 rounded-full bg-black border-gray-400 hover:scale-110 transition-transform duration-200 flex items-center justify-center shadow-lg ${
+                                    isInAnimationState() ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                             >
-                                <img 
-                                    src={getCurrentBirdAssets().idle} 
-                                    alt="Pet"
-                                    className="w-8 h-8 object-contain"
-                                    style={{ imageRendering: 'crisp-edges' }}
-                                />
-                                {unlockedPets.length > 1 && (
-                                    <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
-                                        {unlockedPets.length}
-                                    </span>
+                                {activePet && birdVisible ? (
+                                    <img 
+                                        src={getCurrentBirdAssets().idle} 
+                                        alt="Pet"
+                                        className="w-8 h-8 object-contain"
+                                        style={{ imageRendering: 'crisp-edges' }}
+                                    />
+                                ) : (
+                                    <span className="text-xs text-gray-400">No Pet</span>
                                 )}
+                                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full text-white text-xs flex items-center justify-center">
+                                    {unlockedPets.length}
+                                </span>
                             </button>
                         ) : (
                             <button
@@ -1198,6 +1340,45 @@ function Header({ username, isTimerActive }) {
 
             {birdVisible && (
                 <>
+                    {/* NEW: Petting Hand Animation */}
+                    {showPettingHand && (
+                        <div
+                            className="fixed z-50 pointer-events-none petting-hand"
+                            style={{
+                                left: `${pettingHandPosition.x}px`,
+                                top: `${pettingHandPosition.y}px`,
+                                transform: `rotate(${handRotation}deg)`,
+                                transition: 'all 0.2s ease-out',
+                            }}
+                        >
+                            <img 
+                                src={palmImage}
+                                alt="Petting hand"
+                                className="w-10 h-10 object-contain"
+                                style={{
+                                    filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.6))',
+                                    imageRendering: 'crisp-edges'
+                                }}
+                            />
+                            
+                            {/* Sparkle effects around the hand */}
+                            {[...Array(4)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className="absolute sparkle-effect"
+                                    style={{
+                                        left: `${15 + Math.random() * 20}px`,
+                                        top: `${10 + Math.random() * 20}px`,
+                                        animationDelay: `${i * 0.1}s`,
+                                        fontSize: '16px'
+                                    }}
+                                >
+                                    ✨
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Enhanced Trail Effects */}
                     {showTrail && (activePet !== 'master' && userRank !== 'master') && trailPositions.map((pos, index) => {
                         const currentPet = getCurrentPetType();
@@ -1325,8 +1506,8 @@ function Header({ username, isTimerActive }) {
                             }}
                         />
                         
-                        {/* Enhanced Bird Control Panel */}
-                        {showBirdControls && (
+                        {/* Enhanced Bird Control Panel - Only show when NOT in flight mode */}
+                        {showBirdControls && !petEffect && !legendaryEffect && !isInFlightMode && (
                             <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 control-panel-enter">
                                 <div 
                                     className="flex items-center gap-2 px-4 py-2 rounded-xl shadow-xl border backdrop-blur-md"
@@ -1377,10 +1558,10 @@ function Header({ username, isTimerActive }) {
                         )}
                         
                         {/* Enhanced Thought Bubble */}
-                        {showThoughtBubble && !birdSelected && !isMoving && !petEffect && !legendaryEffect && (
+                        {showThoughtBubble && !birdSelected && !isMoving && !petEffect && !legendaryEffect && !isInFlightMode && (
                             <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 thought-bubble-enter">
                                 <div 
-                                    className="relative rounded-2xl px-3 py-2 shadow-lg border backdrop-blur-sm min-w-[120px]"
+                                    className="relative rounded-2xl px-3 py-2 shadow-lg border backdrop-blur-sm min-w-[160px]"
                                     style={{
                                         background: `linear-gradient(135deg, rgba(255,255,255,0.95), rgba(240,240,240,0.9))`,
                                         borderColor: getPetEffects(getCurrentPetType()).glowColor + '60',
@@ -1449,8 +1630,8 @@ function Header({ username, isTimerActive }) {
                             </div>
                         )}
                         
-                        {/* Enhanced Flight Mode Messages */}
-                        {interactionMode === 'fly' && birdSelected && !isMoving && !petEffect && !legendaryEffect && (
+                        {/* SIMPLIFIED Flight Mode Message */}
+                        {isInFlightMode && birdSelected && !isMoving && !petEffect && !legendaryEffect && (
                             <div className="absolute -top-10 left-1/2 transform -translate-x-1/2">
                                 <div 
                                     className="text-white text-sm px-3 py-1.5 rounded-lg animate-pulse backdrop-blur-sm border min-w-[200px] text-center"
@@ -1470,7 +1651,7 @@ function Header({ username, isTimerActive }) {
                         {isMoving && (activePet !== 'master') && (
                             <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 flex items-center gap-1">
                                 <div 
-                                    className="text-white text-sm px-3 py-2 rounded-lg animate-pulse backdrop-blur-sm border min-w-[150px] text-center"
+                                    className="text-white text-sm px-3 py-2 rounded-lg animate-pulse backdrop-blur-sm border min-w-[170px] text-center"
                                     style={{
                                         background: `linear-gradient(135deg, ${getPetEffects(getCurrentPetType()).glowColor}, ${getPetEffects(getCurrentPetType()).auraColor})`,
                                         borderColor: '#ffffff50',
@@ -1571,6 +1752,7 @@ function Header({ username, isTimerActive }) {
                     activePet={activePet}
                     onSelectPet={handlePetSelection}
                     birdAssets={birdAssets}
+                    showNoneOption={true}
                 />
             )}
         </>
